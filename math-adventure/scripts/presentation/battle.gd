@@ -18,6 +18,8 @@ var score: int = 0
 var defeated_enemies: int = 0
 var total_questions: int = 0
 var correct_answers: int = 0
+var wrong_answers: int = 0
+var answer_history: Array[Dictionary] = []
 var current_wave: int = 0
 var spawned_this_wave: int = 0
 var spawn_target: int = 0
@@ -86,6 +88,26 @@ func _process(delta: float) -> void:
 			_finish_battle(true)
 
 	_refresh_hud()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event is InputEventKey:
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	if key_event.keycode == KEY_ESCAPE:
+		_toggle_pause()
+		get_viewport().set_input_as_handled()
+		return
+	if battle_finished or paused:
+		return
+	match key_event.keycode:
+		KEY_1:
+			_select_guardian("Plusy")
+		KEY_2:
+			_select_guardian("Addy Cannon")
+		KEY_3:
+			_select_guardian("Shield Cube")
 
 func _build_ui() -> void:
 	var background := ColorRect.new()
@@ -245,7 +267,7 @@ func _build_ui() -> void:
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 10)
 	outer.add_child(footer)
-	var instruction := _make_label("JAWAB SOAL  →  KUMPULKAN ENERGI  →  LINDUNGI CORE", 12, Color("#9fbdb2"))
+	var instruction := _make_label("1 / 2 / 3: PILIH GUARDIAN  •  ESC: JEDA", 11, Color("#9fbdb2"))
 	instruction.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(instruction)
 	pause_button = _make_button("JEDA", Vector2(88, 34), false)
@@ -282,7 +304,14 @@ func _on_answer_pressed(index: int) -> void:
 		return
 	var chosen: int = int(options[index])
 	var correct: int = int(current_question["answer"])
+	var question_text: String = "%d %s %d" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
 	total_questions += 1
+	answer_history.append({
+		"question": question_text,
+		"chosen": chosen,
+		"answer": correct,
+		"correct": chosen == correct
+	})
 	if chosen == correct:
 		correct_answers += 1
 		combo += 1
@@ -297,6 +326,7 @@ func _on_answer_pressed(index: int) -> void:
 		if is_instance_valid(arena):
 			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 38.0), Color("#a6e6b8"), "+%d ENERGI" % total_reward)
 	else:
+		wrong_answers += 1
 		combo = 0
 		energy = mini(999, energy + 10)
 		var explanation: String = "%d %s %d = %d" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"]), correct]
@@ -309,6 +339,10 @@ func _on_answer_pressed(index: int) -> void:
 
 func _select_guardian(guardian_type: String) -> void:
 	if battle_finished or paused:
+		return
+	if energy < int(GUARDIAN_COSTS.get(guardian_type, 99999)) and selected_guardian != guardian_type:
+		feedback_label.text = "Energi belum cukup. Butuh %d untuk %s." % [int(GUARDIAN_COSTS.get(guardian_type, 0)), guardian_type]
+		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 		return
 	if selected_guardian == guardian_type:
 		selected_guardian = ""
@@ -601,7 +635,7 @@ func _finish_battle(victory: bool) -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(470, 285)
+	panel.custom_minimum_size = Vector2(540, 360)
 	panel.add_theme_stylebox_override("panel", _panel_style(Color("#1a4140"), Color("#8ccca2"), 20, 22))
 	center.add_child(panel)
 	var content := VBoxContainer.new()
@@ -615,9 +649,22 @@ func _finish_battle(victory: bool) -> void:
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(detail)
 	var accuracy: int = roundi(float(correct_answers) / float(maxi(total_questions, 1)) * 100.0)
-	var stats := _make_label("Skor %d  •  Musuh dikalahkan %d  •  Akurasi %d%%" % [score, defeated_enemies, accuracy], 13, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
+	var stats := _make_label("Skor %d  •  Musuh dikalahkan %d\nBenar %d  •  Salah %d  •  Akurasi %d%%" % [score, defeated_enemies, correct_answers, wrong_answers, accuracy], 13, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stats.custom_minimum_size = Vector2(0, 42)
 	content.add_child(stats)
+	var review_button := _make_button("LIHAT PEMBAHASAN SOAL", Vector2(0, 36), false)
+	review_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(review_button)
+	var review_label := _make_label(_build_review_text(), 12, Color("#d2e5dc"), HORIZONTAL_ALIGNMENT_CENTER)
+	review_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	review_label.custom_minimum_size = Vector2(0, 96)
+	review_label.visible = false
+	content.add_child(review_label)
+	review_button.pressed.connect(func() -> void:
+		review_label.visible = not review_label.visible
+		review_button.text = "SEMBUNYIKAN PEMBAHASAN" if review_label.visible else "LIHAT PEMBAHASAN SOAL"
+	)
 	var replay := _make_button("MAIN LAGI", Vector2(0, 44), true)
 	replay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	replay.pressed.connect(func() -> void: get_tree().reload_current_scene())
@@ -626,6 +673,20 @@ func _finish_battle(victory: bool) -> void:
 	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	menu.pressed.connect(_return_to_menu)
 	content.add_child(menu)
+
+func _build_review_text() -> String:
+	var wrong_records: Array[Dictionary] = []
+	for record in answer_history:
+		if not bool(record.get("correct", false)):
+			wrong_records.append(record)
+	if wrong_records.is_empty():
+		return "Hebat! Semua jawabanmu benar. Tidak ada soal yang perlu diulas."
+	var lines: Array[String] = ["Pembahasan 4 jawaban salah terakhir:"]
+	var start_index: int = maxi(0, wrong_records.size() - 4)
+	for index in range(start_index, wrong_records.size()):
+		var record: Dictionary = wrong_records[index]
+		lines.append("%s  •  Jawabanmu: %s  •  Jawaban benar: %s" % [str(record.get("question", "")), str(record.get("chosen", "")), str(record.get("answer", ""))])
+	return "\n".join(lines)
 
 func _save_best_score() -> void:
 	var save_data := ConfigFile.new()

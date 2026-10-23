@@ -8,7 +8,7 @@ Math-Adventure adalah game edukasi matematika bergaya lane-defense untuk Godot 4
 2. Pilih **Import** dan pilih `project.godot` di folder proyek ini jika proyek belum muncul di daftar.
 3. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F5**.
 
-## Fitur MVP 0.4
+## Fitur MVP 0.5
 
 - Menu utama berbahasa Indonesia dengan panduan bermain dan rekor skor terbaik.
 - Layar 1280 × 720, dengan pengaturan layar yang dapat diperbesar.
@@ -30,6 +30,10 @@ Math-Adventure adalah game edukasi matematika bergaya lane-defense untuk Godot 4
 - Animasi idle ringan untuk Guardian dan musuh agar arena terasa hidup.
 - Efek visual prosedural untuk penempatan Guardian, tembakan, benturan, musuh kalah, dan kerusakan Core.
 - Pop-up energi dan skor yang muncul langsung di arena sebagai umpan balik aksi pemain.
+- Pintasan keyboard: 1 memilih Plusy, 2 memilih Addy Cannon, 3 memilih Shield Cube, dan Esc menjeda atau melanjutkan permainan.
+- Rekap akhir permainan menampilkan jumlah jawaban benar, salah, dan akurasi.
+- Tombol pembahasan menampilkan hingga empat jawaban salah terakhir beserta jawaban yang benar.
+- Pemilihan Guardian melalui keyboard memberi pesan jika Math Energy belum mencukupi.
 - Proyektil memiliki cahaya dan jejak yang lebih jelas.
 - Visual arena dan karakter dibuat menggunakan kode. Tidak membutuhkan aset PvZ atau unduhan eksternal.
 

@@ -95,7 +95,7 @@ func _build_ui() -> void:
 	var record := _make_label("REKOR TERBAIK: %d" % best_score, 12, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(record)
 
-	var version := _make_label("PROTOTIPE 0.4 • GODOT 4.7.2", 10, Color("#70968c"), HORIZONTAL_ALIGNMENT_CENTER)
+	var version := _make_label("PROTOTIPE 0.5 • GODOT 4.7.2", 10, Color("#70968c"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(version)
 
 func _show_help() -> void:
@@ -121,7 +121,7 @@ func _show_help() -> void:
 	content.add_theme_constant_override("separation", 12)
 	panel.add_child(content)
 	content.add_child(_make_label("CARA BERMAIN", 24, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER))
-	var instructions := _make_label("1. Pilih jawaban matematika untuk mendapatkan Math Energy.\n2. Pilih Plusy, Addy Cannon, atau Shield Cube.\n3. Klik petak kosong di salah satu dari tiga jalur.\n4. Plusy menghasilkan energi, Addy menembakkan proyektil, dan Shield menahan musuh.\n5. Lawan tiga wave dan jaga Core Numeria tetap berdiri.\n\nJawaban benar memberi energi lebih banyak. Soal akan meningkat kesulitannya pada setiap wave.", 15, Color("#d2e5dc"))
+	var instructions := _make_label("1. Pilih jawaban matematika untuk mendapatkan Math Energy.\n2. Pilih Plusy, Addy Cannon, atau Shield Cube.\n3. Klik petak kosong di salah satu dari tiga jalur.\n4. Plusy menghasilkan energi, Addy menembakkan proyektil, dan Shield menahan musuh.\n5. Lawan tiga wave dan jaga Core Numeria tetap berdiri.\n6. Pintasan keyboard: tombol 1 memilih Plusy, 2 memilih Addy Cannon, 3 memilih Shield Cube, dan Esc menjeda permainan.\n\nJawaban benar memberi energi lebih banyak. Soal akan meningkat kesulitannya pada setiap wave.", 15, Color("#d2e5dc"))
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(instructions)
 	var close_button := _make_button("MENGERTI", Vector2(0, 44), true)
