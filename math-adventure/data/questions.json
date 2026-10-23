@@ -1,0 +1,33 @@
+{
+  "description": "Contoh bank soal untuk pengembangan berikutnya. MVP saat ini menghasilkan soal penjumlahan dan pengurangan secara acak.",
+  "questions": [
+    {
+      "a": 7,
+      "operator": "+",
+      "b": 5,
+      "answer": 12,
+      "difficulty": "mudah"
+    },
+    {
+      "a": 18,
+      "operator": "-",
+      "b": 9,
+      "answer": 9,
+      "difficulty": "mudah"
+    },
+    {
+      "a": 12,
+      "operator": "+",
+      "b": 8,
+      "answer": 20,
+      "difficulty": "mudah"
+    },
+    {
+      "a": 20,
+      "operator": "-",
+      "b": 7,
+      "answer": 13,
+      "difficulty": "mudah"
+    }
+  ]
+}
