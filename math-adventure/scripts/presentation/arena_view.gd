@@ -108,7 +108,7 @@ func _draw() -> void:
 		_draw_visual_effect(effect)
 
 	if placement_enabled:
-		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "PILIH PETAK KOSONG UNTUK MENEMPATKAN GUARDIAN", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#c6f2d2"))
+		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "KETUK PETAK KOSONG UNTUK MENEMPATKAN GUARDIAN", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#c6f2d2"))
 	else:
 		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "PERTAHANKAN CORE NUMERIA", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#9fbdb2"))
 
@@ -249,6 +249,7 @@ func _gui_input(event: InputEvent) -> void:
 		_handle_slot_click(event.position)
 		accept_event()
 	elif event is InputEventScreenTouch and event.pressed:
+		_update_hover(event.position)
 		_handle_slot_click(event.position)
 		accept_event()
 

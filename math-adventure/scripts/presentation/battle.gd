@@ -89,26 +89,6 @@ func _process(delta: float) -> void:
 
 	_refresh_hud()
 
-func _unhandled_key_input(event: InputEvent) -> void:
-	if not event is InputEventKey:
-		return
-	var key_event := event as InputEventKey
-	if not key_event.pressed or key_event.echo:
-		return
-	if key_event.keycode == KEY_ESCAPE:
-		_toggle_pause()
-		get_viewport().set_input_as_handled()
-		return
-	if battle_finished or paused:
-		return
-	match key_event.keycode:
-		KEY_1:
-			_select_guardian("Plusy")
-		KEY_2:
-			_select_guardian("Addy Cannon")
-		KEY_3:
-			_select_guardian("Shield Cube")
-
 func _build_ui() -> void:
 	var background := ColorRect.new()
 	background.color = Color("#102b32")
@@ -236,7 +216,7 @@ func _build_ui() -> void:
 	answer_grid.add_theme_constant_override("v_separation", 7)
 	side.add_child(answer_grid)
 	for index in range(4):
-		var answer_button := _make_button("?", Vector2(0, 46), false)
+		var answer_button := _make_button("?", Vector2(0, 52), false)
 		answer_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		answer_button.pressed.connect(_on_answer_pressed.bind(index))
 		answer_buttons.append(answer_button)
@@ -253,29 +233,29 @@ func _build_ui() -> void:
 	side.add_child(guardian_heading)
 
 	for guardian_type in guardian_button_types:
-		var guardian_button := _make_button(str(GUARDIAN_DESCRIPTIONS[guardian_type]), Vector2(0, 42), false)
+		var guardian_button := _make_button(str(GUARDIAN_DESCRIPTIONS[guardian_type]), Vector2(0, 50), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		guardian_button.add_theme_font_size_override("font_size", 12)
 		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
 		guardian_buttons.append(guardian_button)
 		side.add_child(guardian_button)
 
-	var guardian_help := _make_label("Pilih Guardian, lalu klik petak kosong. Plusy menghasilkan energi, Addy menembak, Shield menahan musuh.", 11, Color("#9fbdb2"))
+	var guardian_help := _make_label("Pilih Guardian, lalu ketuk petak kosong. Plusy menghasilkan energi, Addy menembak, Shield menahan musuh.", 11, Color("#9fbdb2"))
 	guardian_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(guardian_help)
 
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 10)
 	outer.add_child(footer)
-	var instruction := _make_label("1 / 2 / 3: PILIH GUARDIAN  •  ESC: JEDA", 11, Color("#9fbdb2"))
+	var instruction := _make_label("Ketuk Guardian, lalu ketuk petak kosong.", 11, Color("#9fbdb2"))
 	instruction.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(instruction)
-	pause_button = _make_button("JEDA", Vector2(88, 34), false)
-	pause_button.add_theme_font_size_override("font_size", 12)
+	pause_button = _make_button("JEDA", Vector2(96, 48), false)
+	pause_button.add_theme_font_size_override("font_size", 14)
 	pause_button.pressed.connect(_toggle_pause)
 	footer.add_child(pause_button)
-	var menu_button := _make_button("MENU", Vector2(82, 34), false)
-	menu_button.add_theme_font_size_override("font_size", 12)
+	var menu_button := _make_button("MENU", Vector2(88, 48), false)
+	menu_button.add_theme_font_size_override("font_size", 14)
 	menu_button.pressed.connect(_return_to_menu)
 	footer.add_child(menu_button)
 

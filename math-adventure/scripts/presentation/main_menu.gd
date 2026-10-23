@@ -78,11 +78,11 @@ func _build_ui() -> void:
 	var secondary_row := HBoxContainer.new()
 	secondary_row.add_theme_constant_override("separation", 9)
 	card_content.add_child(secondary_row)
-	var help_button := _make_button("CARA BERMAIN", Vector2(0, 42), false)
+	var help_button := _make_button("CARA BERMAIN", Vector2(0, 48), false)
 	help_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	help_button.pressed.connect(_show_help)
 	secondary_row.add_child(help_button)
-	var exit_button := _make_button("KELUAR", Vector2(110, 42), false)
+	var exit_button := _make_button("KELUAR", Vector2(110, 48), false)
 	exit_button.pressed.connect(_exit_game)
 	secondary_row.add_child(exit_button)
 
@@ -121,7 +121,7 @@ func _show_help() -> void:
 	content.add_theme_constant_override("separation", 12)
 	panel.add_child(content)
 	content.add_child(_make_label("CARA BERMAIN", 24, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER))
-	var instructions := _make_label("1. Pilih jawaban matematika untuk mendapatkan Math Energy.\n2. Pilih Plusy, Addy Cannon, atau Shield Cube.\n3. Klik petak kosong di salah satu dari tiga jalur.\n4. Plusy menghasilkan energi, Addy menembakkan proyektil, dan Shield menahan musuh.\n5. Lawan tiga wave dan jaga Core Numeria tetap berdiri.\n6. Pintasan keyboard: tombol 1 memilih Plusy, 2 memilih Addy Cannon, 3 memilih Shield Cube, dan Esc menjeda permainan.\n\nJawaban benar memberi energi lebih banyak. Soal akan meningkat kesulitannya pada setiap wave.", 15, Color("#d2e5dc"))
+	var instructions := _make_label("1. Ketuk jawaban matematika untuk mendapatkan Math Energy.\n2. Ketuk Plusy, Addy Cannon, atau Shield Cube.\n3. Ketuk petak kosong pada salah satu dari tiga jalur untuk menempatkan Guardian.\n4. Plusy menghasilkan energi, Addy menembakkan proyektil, dan Shield menahan musuh.\n5. Ketuk tombol JEDA untuk menghentikan sementara permainan.\n6. Lawan tiga wave dan jaga Core Numeria tetap berdiri.\n\nJawaban benar memberi energi lebih banyak. Soal meningkat kesulitannya pada setiap wave.", 15, Color("#d2e5dc"))
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(instructions)
 	var close_button := _make_button("MENGERTI", Vector2(0, 44), true)
