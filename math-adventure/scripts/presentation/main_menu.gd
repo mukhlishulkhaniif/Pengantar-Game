@@ -29,7 +29,7 @@ func _build_ui() -> void:
 	add_child(center)
 
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(560, 0)
+	column.custom_minimum_size = Vector2(minf(560.0, maxf(300.0, get_viewport_rect().size.x - 36.0)), 0)
 	column.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_theme_constant_override("separation", 10)
 	center.add_child(column)
@@ -89,7 +89,7 @@ func _show_help() -> void:
 	help_overlay.add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(520, 0)
+	panel.custom_minimum_size = Vector2(minf(520.0, maxf(300.0, get_viewport_rect().size.x - 36.0)), 0)
 	panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 24))
 	center.add_child(panel)
 

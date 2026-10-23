@@ -218,7 +218,7 @@ func _build_ui() -> void:
 	question_popup.add_child(popup_center)
 
 	var popup_panel := PanelContainer.new()
-	popup_panel.custom_minimum_size = Vector2(470, 0)
+	popup_panel.custom_minimum_size = Vector2(minf(470.0, maxf(320.0, get_viewport_rect().size.x - 32.0)), 0)
 	popup_panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 16))
 	popup_center.add_child(popup_panel)
 
@@ -233,25 +233,29 @@ func _build_ui() -> void:
 	reward_hint_label = _make_label("BENAR +ENERGI  •  SALAH +10", 10, Color("#66583f"), HORIZONTAL_ALIGNMENT_CENTER)
 	popup_content.add_child(reward_hint_label)
 
-	var answer_row := HBoxContainer.new()
-	answer_row.add_theme_constant_override("separation", 7)
-	answer_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	popup_content.add_child(answer_row)
+	# Dua kolom memberi target sentuh lebih besar pada layar HP.
+	var answer_grid := GridContainer.new()
+	answer_grid.columns = 2
+	answer_grid.add_theme_constant_override("h_separation", 8)
+	answer_grid.add_theme_constant_override("v_separation", 8)
+	answer_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	popup_content.add_child(answer_grid)
 	for index in range(4):
-		var answer_button := _make_button("?", Vector2(84, 58), false)
+		var answer_button := _make_button("?", Vector2(136, 56), false)
 		answer_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		answer_button.add_theme_font_size_override("font_size", 20)
+		answer_button.add_theme_font_size_override("font_size", 21)
 		answer_button.pressed.connect(_on_answer_pressed.bind(index))
 		answer_buttons.append(answer_button)
-		answer_row.add_child(answer_button)
+		answer_grid.add_child(answer_button)
 
-	var close_button := _make_button("LANJUT BERMAIN", Vector2(0, 38), true)
+	var close_button := _make_button("LANJUT BERMAIN", Vector2(0, 46), true)
 	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	close_button.pressed.connect(_close_question_popup)
 	popup_content.add_child(close_button)
 
 func _input(event: InputEvent) -> void:
-	# Drag kartu bekerja dengan mouse saat pengembangan dan sentuhan di Android.
+	# Input mouse untuk editor PC dan input sentuh untuk target Android.
+	# Drag kartu dimulai dari kartu Guardian, lalu dilepas pada petak arena.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_begin_drag_candidate(event.position)
@@ -716,7 +720,7 @@ func _finish_battle(victory: bool) -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(540, 360)
+	panel.custom_minimum_size = Vector2(minf(540.0, maxf(320.0, get_viewport_rect().size.x - 32.0)), 0)
 	panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 22))
 	center.add_child(panel)
 	var content := VBoxContainer.new()
@@ -734,7 +738,7 @@ func _finish_battle(victory: bool) -> void:
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	stats.custom_minimum_size = Vector2(0, 42)
 	content.add_child(stats)
-	var review_button := _make_button("LIHAT PEMBAHASAN SOAL", Vector2(0, 36), false)
+	var review_button := _make_button("LIHAT PEMBAHASAN SOAL", Vector2(0, 46), false)
 	review_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(review_button)
 	var review_label := _make_label(_build_review_text(), 12, Color("#4c4b38"), HORIZONTAL_ALIGNMENT_CENTER)
@@ -746,11 +750,11 @@ func _finish_battle(victory: bool) -> void:
 		review_label.visible = not review_label.visible
 		review_button.text = "SEMBUNYIKAN PEMBAHASAN" if review_label.visible else "LIHAT PEMBAHASAN SOAL"
 	)
-	var replay := _make_button("MAIN LAGI", Vector2(0, 44), true)
+	var replay := _make_button("MAIN LAGI", Vector2(0, 48), true)
 	replay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	replay.pressed.connect(func() -> void: get_tree().reload_current_scene())
 	content.add_child(replay)
-	var menu := _make_button("MENU UTAMA", Vector2(0, 40), false)
+	var menu := _make_button("MENU UTAMA", Vector2(0, 46), false)
 	menu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	menu.pressed.connect(_return_to_menu)
 	content.add_child(menu)

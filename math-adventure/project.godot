@@ -1,5 +1,5 @@
 ; Engine configuration file.
-; Math-Adventure 0.8 - Godot 4.7.2
+; Math-Adventure 0.9 - Godot 4.7.2
 config_version=5
 
 [application]
@@ -7,7 +7,7 @@ config_version=5
 config/name="Math-Adventure"
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/description="Game edukasi matematika tower defense untuk perangkat mobile. Prototype 0.8 mobile UI refresh, on-demand math challenge, vintage art direction, and optional PNG sprite loading."
+config/description="Game edukasi matematika tower defense untuk perangkat mobile. Prototype 0.9 mobile usability pass: responsive panels, larger touch-friendly answer controls, and improved Android testing guidance. Art assets are intentionally deferred."
 
 [display]
 
