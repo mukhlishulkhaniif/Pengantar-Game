@@ -1,11 +1,34 @@
 extends RefCounted
-## Membuat soal aritmetika dasar untuk MVP Math-Adventure.
+## Pembuat soal aritmetika untuk Math-Adventure.
+## Wave 1 memakai angka kecil, wave 2 menengah, dan wave 3 angka lebih besar.
 
-static func make_question() -> Dictionary:
-	var a: int = randi_range(2, 20)
-	var b: int = randi_range(1, 20)
+static func make_question(difficulty: String = "mudah") -> Dictionary:
+	var min_value: int = 0
+	var max_value: int = 20
+	var reward: int = 30
+	var difficulty_label: String = "Mudah"
+
+	match difficulty.to_lower():
+		"sedang", "medium":
+			min_value = 10
+			max_value = 50
+			reward = 50
+			difficulty_label = "Sedang"
+		"sulit", "hard":
+			min_value = 20
+			max_value = 100
+			reward = 80
+			difficulty_label = "Sulit"
+		_:
+			min_value = 0
+			max_value = 20
+			reward = 30
+			difficulty_label = "Mudah"
+
+	var a: int = randi_range(min_value, max_value)
+	var b: int = randi_range(min_value, max_value)
 	var operator: String = "+" if randi_range(0, 1) == 0 else "-"
-	var answer: int
+	var answer: int = 0
 
 	if operator == "-":
 		if b > a:
@@ -17,16 +40,28 @@ static func make_question() -> Dictionary:
 		answer = a + b
 
 	var options: Array[int] = [answer]
-	while options.size() < 4:
-		var candidate: int = answer + randi_range(-10, 10)
+	var attempts: int = 0
+	var spread: int = maxi(5, int(round(float(max_value) * 0.22)))
+	while options.size() < 4 and attempts < 120:
+		attempts += 1
+		var candidate: int = answer + randi_range(-spread, spread)
 		if candidate >= 0 and not options.has(candidate):
 			options.append(candidate)
-	options.shuffle()
 
+	# Fallback menjamin selalu ada empat pilihan berbeda.
+	var fallback: int = 0
+	while options.size() < 4:
+		if not options.has(answer + fallback):
+			options.append(answer + fallback)
+		fallback += 1
+
+	options.shuffle()
 	return {
 		"a": a,
 		"b": b,
 		"operator": operator,
 		"answer": answer,
-		"options": options
+		"options": options,
+		"difficulty": difficulty_label,
+		"reward": reward
 	}

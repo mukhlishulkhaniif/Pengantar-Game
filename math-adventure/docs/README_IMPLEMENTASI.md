@@ -1,19 +1,22 @@
-# Catatan Implementasi MVP
+# Catatan Implementasi
 
-Dokumen desain asli tetap disimpan di folder ini. MVP awal sengaja dibuat sederhana agar bisa langsung diuji sebelum semua sistem arsitektur diperluas.
+## Versi 0.2
 
-## Mekanik MVP
+MVP 0.2 memperbarui visual arena, alur soal matematika, wave, serangan proyektil, perilaku musuh, jeda permainan, dan statistik akhir. Semua visual utama dibuat dengan fungsi gambar Godot sehingga tidak membutuhkan aset eksternal.
 
-- Arena memiliki 3 jalur dan 6 kolom.
-- Pemain mulai dengan 100 Math Energy dan Core Numeria 100 HP.
-- Jawaban benar memberi +30 energi; setiap combo ketiga memberi bonus +10.
-- Jawaban salah tetap memberi +10 energi untuk menjaga pemain pemula tetap bisa melanjutkan.
-- Plusy berharga 50 dan menghasilkan +5 energi setiap 5 detik.
-- Addy Cannon berharga 100 dan menyerang musuh pada jalur yang sama.
-- Shield Cube berharga 75, memiliki 300 HP, dan menghalangi musuh.
-- Ada 3 wave dengan 3, 4, dan 5 musuh.
-- Minus Monster mulai muncul pada wave kedua.
+### Alur permainan
 
-## Batasan yang diketahui
+1. Menu utama menyediakan tombol mulai dan panduan.
+2. Battle dimulai pada wave pertama dengan soal mudah.
+3. Jawaban benar memberi energi sesuai tingkat kesulitan; jawaban salah tetap memberi bantuan energi yang lebih kecil dan menunjukkan jawaban yang benar.
+4. Energi digunakan untuk menempatkan Guardian di petak kosong.
+5. Guardian memiliki peran berbeda: Plusy menghasilkan energi, Addy Cannon menembakkan proyektil, Shield Cube menahan musuh.
+6. Wave berikutnya menaikkan kesulitan soal dan variasi musuh.
+7. Hasil akhir menampilkan skor, jumlah musuh dikalahkan, dan akurasi jawaban.
 
-Ini prototype pertama, bukan versi rilis. Belum tersedia animasi karakter berbasis sprite, efek suara, sistem simpan progres, peta dunia, upgrade Guardian, maupun paket ekspor mobile. Tampilan arena dibuat menggunakan fungsi gambar Godot agar tidak bergantung pada aset eksternal.
+### Batasan yang masih diketahui
+
+- Progress level dan skor belum disimpan lintas sesi.
+- Guardian belum memiliki sistem upgrade atau penjualan.
+- Ekspor Android/iOS dan kontrol perangkat fisik belum disiapkan secara final.
+- Uji akhir tetap perlu dilakukan di Godot 4.7.2 pada komputer pengguna.

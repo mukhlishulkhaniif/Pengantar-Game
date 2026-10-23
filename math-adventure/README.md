@@ -1,40 +1,55 @@
 # Math-Adventure
 
-Prototype MVP game edukasi matematika berbasis lane defense, dibuat untuk Godot 4.7.2.
+Math-Adventure adalah game edukasi matematika bergaya lane-defense untuk Godot 4.7.2. Pemain menjawab soal, mengumpulkan Math Energy, lalu menempatkan Math Guardian untuk melindungi Core Numeria.
 
 ## Menjalankan game
 
 1. Buka Godot Project Manager.
-2. Klik **Import**.
-3. Pilih file `project.godot` di folder proyek ini.
-4. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F6** atau **F5**. Gunakan F5 untuk menjalankan scene utama.
+2. Pilih **Import** dan pilih `project.godot` di folder proyek ini jika proyek belum muncul di daftar.
+3. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F5**.
 
-## Fitur yang sudah ada
+## Fitur MVP 0.2
 
-- Menu utama berbahasa Indonesia.
-- Arena 3 jalur dan 6 kolom penempatan Guardian.
-- Soal acak penjumlahan dan pengurangan dengan empat pilihan jawaban.
-- Jawaban benar memberi 30 Math Energy, jawaban salah memberi 10 Math Energy.
-- Guardian: Plusy (generator energi), Addy Cannon (penyerang jarak jauh), Shield Cube (penghalang).
-- Tiga wave dengan Error Blob dan Minus Monster.
-- Core Numeria, kondisi menang/kalah, dan tombol main ulang.
-- Seluruh grafis MVP digambar menggunakan kode. Tidak membutuhkan aset PvZ.
+- Menu utama bahasa Indonesia dengan panduan cara bermain.
+- Layar 1280 × 720 dan jendela yang terbuka maksimal.
+- Arena 3 jalur dan 6 kolom untuk menempatkan Guardian.
+- Soal penjumlahan dan pengurangan dengan empat pilihan jawaban.
+- Kesulitan soal meningkat setiap wave: mudah, sedang, lalu sulit.
+- Reward jawaban benar mengikuti kesulitan: +30, +50, dan +80 Math Energy.
+- Jawaban salah tetap memberi +10 energi dan menampilkan jawaban yang benar.
+- Combo tiga jawaban benar berturut-turut memberi bonus +10 energi.
+- Plusy menghasilkan +5 energi setiap 5 detik.
+- Addy Cannon menembakkan proyektil yang terlihat dan memberi 10 damage.
+- Shield Cube memiliki 300 HP dan menahan musuh pada jalurnya.
+- Tiga wave dengan 18 musuh total, termasuk Error Blob, Minus Monster, dan Calculator Bug.
+- Minus Monster mengurangi energi jika mencapai Core; Calculator Bug bergerak lebih cepat.
+- Tombol jeda, skor, jumlah musuh yang dikalahkan, akurasi jawaban, layar menang/kalah, dan tombol main lagi.
+- Seluruh visual karakter dan arena digambar menggunakan kode. Tidak membutuhkan aset PvZ atau unduhan eksternal.
 
 ## Kontrol
 
-1. Jawab soal di panel kanan untuk mendapatkan energi.
-2. Pilih Guardian di panel kanan.
-3. Klik petak di arena untuk menempatkannya.
-4. Pertahankan Core Numeria sampai semua wave selesai.
+1. Pilih salah satu jawaban matematika di panel kanan.
+2. Pilih Guardian yang tersedia sesuai energi.
+3. Klik petak kosong pada arena untuk menempatkan Guardian.
+4. Gunakan **Jeda/Lanjut** untuk menghentikan atau melanjutkan simulasi.
+5. Lindungi Core Numeria hingga seluruh wave selesai.
 
 ## Struktur
 
 - `scenes/`: scene Godot.
-- `scripts/presentation/`: menu, arena, dan tampilan battle MVP.
-- `scripts/domain/`: pembuat soal matematika.
-- `data/`: contoh bank soal untuk pengembangan berikutnya.
-- `docs/`: dokumen desain awal.
+- `scripts/presentation/`: menu, arena, dan battle.
+- `scripts/domain/`: pembuat soal dan aturan matematika.
+- `data/`: contoh bank soal.
+- `assets/`: aset orisinal tambahan bila diperlukan.
+- `resources/`: resource Godot untuk data karakter/level jika ditambahkan.
+- `docs/`: dokumentasi proyek dan dokumen desain asli.
+
+## Git dan backup
+
+Folder `.godot/` berisi cache lokal Godot dan dikecualikan oleh `.gitignore`. Jangan membuat repository Git baru di dalam folder proyek karena repository induk sudah berada di `Pengantar-Game`.
+
+Setelah fitur penting berhasil diuji, buat commit di GitHub Desktop dan klik **Push origin** untuk mengirim checkpoint ke GitHub.
 
 ## Catatan
 
-Ini adalah MVP awal yang dapat dikembangkan. Mekanik dan tampilan dapat disesuaikan dengan GDD. Belum ada ekspor Android/iOS yang disiapkan.
+Ini adalah MVP yang ditingkatkan, bukan rilis final. Uji gameplay di Godot 4.7.2 sebelum melanjutkan ke ekspor Android/iOS. Dokumen desain asli tetap berada di `docs/original/` sebagai referensi.

@@ -1,33 +1,16 @@
 {
-  "description": "Contoh bank soal untuk pengembangan berikutnya. MVP saat ini menghasilkan soal penjumlahan dan pengurangan secara acak.",
+  "description": "Contoh bank soal dan referensi reward untuk Math-Adventure. Saat permainan berjalan, question_generator.gd menghasilkan soal penjumlahan dan pengurangan sesuai wave.",
+  "difficulty": {
+    "mudah": {"min_number": 0, "max_number": 20, "reward": 30},
+    "sedang": {"min_number": 10, "max_number": 50, "reward": 50},
+    "sulit": {"min_number": 20, "max_number": 100, "reward": 80}
+  },
   "questions": [
-    {
-      "a": 7,
-      "operator": "+",
-      "b": 5,
-      "answer": 12,
-      "difficulty": "mudah"
-    },
-    {
-      "a": 18,
-      "operator": "-",
-      "b": 9,
-      "answer": 9,
-      "difficulty": "mudah"
-    },
-    {
-      "a": 12,
-      "operator": "+",
-      "b": 8,
-      "answer": 20,
-      "difficulty": "mudah"
-    },
-    {
-      "a": 20,
-      "operator": "-",
-      "b": 7,
-      "answer": 13,
-      "difficulty": "mudah"
-    }
+    {"a": 7, "operator": "+", "b": 5, "answer": 12, "difficulty": "mudah"},
+    {"a": 18, "operator": "-", "b": 9, "answer": 9, "difficulty": "mudah"},
+    {"a": 32, "operator": "+", "b": 18, "answer": 50, "difficulty": "sedang"},
+    {"a": 45, "operator": "-", "b": 27, "answer": 18, "difficulty": "sedang"},
+    {"a": 76, "operator": "+", "b": 58, "answer": 134, "difficulty": "sulit"},
+    {"a": 91, "operator": "-", "b": 46, "answer": 45, "difficulty": "sulit"}
   ]
 }
