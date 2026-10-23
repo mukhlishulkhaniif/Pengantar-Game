@@ -11,6 +11,9 @@ var projectiles: Array = []
 var placement_enabled: bool = false
 var visual_time: float = 0.0
 var hovered_cell: Vector2i = Vector2i(-1, -1)
+var drag_preview_active: bool = false
+var drag_guardian_type: String = ""
+var drag_position: Vector2 = Vector2.ZERO
 var visual_effects: Array[Dictionary] = []
 
 func _ready() -> void:
@@ -81,8 +84,6 @@ func _draw() -> void:
 		var y: float = grid.position.y + lane_line * lane_height
 		draw_line(Vector2(grid.position.x, y), Vector2(grid.position.x + grid.size.x, y), Color("#527c60"), 2.0)
 
-	for lane in range(LANE_COUNT):
-		draw_string(ThemeDB.fallback_font, Vector2(5.0, grid.position.y + (lane + 0.5) * lane_height + 4.0), "J%d" % (lane + 1), HORIZONTAL_ALIGNMENT_LEFT, 30.0, 12, Color("#9fbdb2"))
 
 	# Jalur tengah yang lembut membantu membaca arah gerak musuh.
 	for lane in range(LANE_COUNT):
@@ -96,7 +97,6 @@ func _draw() -> void:
 	draw_rect(core_rect.grow(4.0), Color(0.96, 0.72, 0.28, 0.08), true)
 	draw_rect(core_rect, Color("#b98548"), true)
 	draw_rect(Rect2(core_rect.position.x + 4.0, core_rect.position.y + 12.0, 9.0, core_rect.size.y - 24.0), Color("#f5d57d"), true)
-	draw_string(ThemeDB.fallback_font, Vector2(core_rect.position.x - 3.0, grid.position.y + grid.size.y + 17.0), "CORE", HORIZONTAL_ALIGNMENT_LEFT, 45.0, 11, Color("#f5d57d"))
 
 	for guardian in guardians:
 		_draw_guardian(guardian)
@@ -107,10 +107,48 @@ func _draw() -> void:
 	for effect in visual_effects:
 		_draw_visual_effect(effect)
 
-	if placement_enabled:
-		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "KETUK PETAK KOSONG UNTUK MENEMPATKAN GUARDIAN", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#c6f2d2"))
-	else:
-		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "PERTAHANKAN CORE NUMERIA", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#9fbdb2"))
+	if drag_preview_active:
+		_draw_drag_preview()
+
+
+func update_drag_preview(guardian_type: String, local_position: Vector2) -> void:
+	drag_preview_active = true
+	drag_guardian_type = guardian_type
+	drag_position = local_position
+	_update_hover(local_position)
+	queue_redraw()
+
+func reset_drag_preview() -> void:
+	drag_preview_active = false
+	drag_guardian_type = ""
+	_update_hover(Vector2(-1000.0, -1000.0))
+	queue_redraw()
+
+func get_cell_at_local_position(position: Vector2) -> Vector2i:
+	var grid: Rect2 = _grid_rect()
+	if not grid.has_point(position):
+		return Vector2i(-1, -1)
+	var column: int = int(floor((position.x - grid.position.x) / (grid.size.x / float(COLUMN_COUNT))))
+	var lane: int = int(floor((position.y - grid.position.y) / (grid.size.y / float(LANE_COUNT))))
+	if lane < 0 or lane >= LANE_COUNT or column < 0 or column >= COLUMN_COUNT:
+		return Vector2i(-1, -1)
+	return Vector2i(lane, column)
+
+func _draw_drag_preview() -> void:
+	var cell: Vector2i = get_cell_at_local_position(drag_position)
+	var tint: Color = Color("#86d68a")
+	if cell.x >= 0 and cell.y >= 0 and _cell_is_occupied(cell.x, cell.y):
+		tint = Color("#ed7777")
+	var center: Vector2 = drag_position
+	if cell.x >= 0 and cell.y >= 0:
+		var grid: Rect2 = _grid_rect()
+		var cell_size := Vector2(grid.size.x / float(COLUMN_COUNT), grid.size.y / float(LANE_COUNT))
+		center = Vector2(grid.position.x + (float(cell.y) + 0.5) * cell_size.x, grid.position.y + (float(cell.x) + 0.5) * cell_size.y)
+	draw_circle(center + Vector2(0.0, 4.0), 24.0, Color(0.0, 0.0, 0.0, 0.16))
+	draw_circle(center, 22.0, Color(tint.r, tint.g, tint.b, 0.45))
+	draw_arc(center, 24.0, 0.0, TAU, 28, Color(tint.r, tint.g, tint.b, 0.95), 2.5, true)
+	var short_name: String = "PLUSY" if drag_guardian_type == "Plusy" else "ADDY" if drag_guardian_type == "Addy Cannon" else "SHIELD"
+	draw_string(ThemeDB.fallback_font, center + Vector2(-36.0, 39.0), short_name, HORIZONTAL_ALIGNMENT_CENTER, 72.0, 10, Color("#f8ffe9"))
 
 func _draw_guardian(guardian: Dictionary) -> void:
 	var base_center: Vector2 = get_guardian_center(guardian)
@@ -229,7 +267,7 @@ func _spike_points(center: Vector2, radius: float, spikes: int) -> PackedVector2
 	return points
 
 func _grid_rect() -> Rect2:
-	return Rect2(Vector2(40.0, 28.0), Vector2(maxf(size.x - 58.0, 1.0), maxf(size.y - 56.0, 1.0)))
+	return Rect2(Vector2(30.0, 8.0), Vector2(maxf(size.x - 40.0, 1.0), maxf(size.y - 16.0, 1.0)))
 
 func get_guardian_center(guardian: Dictionary) -> Vector2:
 	var grid: Rect2 = _grid_rect()
@@ -277,10 +315,6 @@ func _on_mouse_exited() -> void:
 	queue_redraw()
 
 func _handle_slot_click(position: Vector2) -> void:
-	var grid: Rect2 = _grid_rect()
-	if not grid.has_point(position):
-		return
-	var column: int = int(floor((position.x - grid.position.x) / (grid.size.x / float(COLUMN_COUNT))))
-	var lane: int = int(floor((position.y - grid.position.y) / (grid.size.y / float(LANE_COUNT))))
-	if lane >= 0 and lane < LANE_COUNT and column >= 0 and column < COLUMN_COUNT:
-		slot_clicked.emit(lane, column)
+	var cell: Vector2i = get_cell_at_local_position(position)
+	if cell.x >= 0 and cell.y >= 0:
+		slot_clicked.emit(cell.x, cell.y)

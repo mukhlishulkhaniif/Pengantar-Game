@@ -16,13 +16,13 @@ Math-Adventure adalah game edukasi matematika tower defense untuk perangkat mobi
 3. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F5** untuk pengujian di komputer.
 4. Untuk mencoba di Android, siapkan Android export template, JDK, Android SDK, lalu atur ekspor melalui Godot Editor Settings dan Project > Export. Petunjuk tersedia di `docs/ANDROID_EXPORT_GUIDE.md`.
 
-## Fitur MVP 0.5.1 Mobile
+## Fitur MVP 0.6 Mobile UI
 
-- Menu utama berbahasa Indonesia dengan panduan bermain dan rekor skor terbaik.
+- Menu utama ringkas berbahasa Indonesia dengan panduan singkat dan rekor skor terbaik.
 - Arena 3 jalur dan 6 kolom dengan petak sentuh untuk menempatkan Guardian.
 - Highlight petak hijau saat siap ditempati dan merah untuk petak terisi.
-- Meter visual kekuatan Core, Math Energy, progres wave, jumlah musuh yang dikalahkan, dan akurasi.
-- Soal penjumlahan dan pengurangan dengan empat pilihan jawaban yang dapat disentuh.
+- HUD ringkas: energi, kartu Guardian, wave, dan HP Core. Statistik lengkap ditampilkan setelah permainan.
+- Soal penjumlahan dan pengurangan berada pada bilah bawah di luar arena agar tidak menutupi jalur.
 - Kesulitan soal meningkat setiap wave: mudah, sedang, lalu sulit.
 - Reward jawaban benar mengikuti kesulitan: +30, +50, dan +80 Math Energy.
 - Jawaban salah menampilkan kembali operasi dan hasil yang benar.
@@ -31,18 +31,18 @@ Math-Adventure adalah game edukasi matematika tower defense untuk perangkat mobi
 - Addy Cannon menembakkan proyektil yang terlihat dan memberi 10 damage.
 - Shield Cube memiliki 300 HP dan menahan musuh pada jalurnya.
 - Tiga wave dengan 18 musuh total, termasuk Error Blob, Minus Monster, dan Calculator Bug.
-- Tombol sentuh JEDA/LANJUT dan MENU.
+- Tombol sentuh ikon jeda dan menu; ukuran kontrol ditingkatkan untuk landscape mobile.
 - Rekap akhir menampilkan jumlah jawaban benar, salah, akurasi, serta pembahasan empat jawaban salah terakhir.
 - Rekor skor terbaik disimpan lokal di `user://math_adventure.cfg`.
 - Animasi dan efek visual prosedural tanpa aset eksternal.
 
 ## Kontrol layar sentuh
 
-1. Ketuk salah satu pilihan jawaban matematika.
-2. Ketuk tombol Guardian yang sesuai dengan jumlah energi.
-3. Ketuk petak kosong di arena untuk menempatkan Guardian.
-4. Ketuk **JEDA** untuk menghentikan atau melanjutkan simulasi.
-5. Ketuk **MENU** untuk kembali ke menu utama.
+1. Seret kartu Guardian dari HUD atas ke petak kosong di arena.
+2. Alternatif: ketuk kartu Guardian, lalu ketuk petak kosong.
+3. Jawab soal pada bilah bawah untuk memperoleh energi.
+4. Ketuk ikon jeda untuk menghentikan atau melanjutkan permainan.
+5. Ketuk ikon rumah untuk kembali ke menu utama.
 
 ## Struktur
 
@@ -62,4 +62,4 @@ Setelah fitur penting diuji, buat commit di GitHub Desktop dan klik **Push origi
 
 ## Status pengujian
 
-Perubahan mobile ini ditinjau secara statis. Jalankan pada Godot 4.7.2, kemudian uji pada perangkat Android sebelum menganggap build siap dirilis.
+Pembaruan layout dan drag-and-drop ditinjau secara statis. Jalankan pada Godot 4.7.2, kemudian uji pada perangkat Android sebelum menganggap build siap dirilis.
