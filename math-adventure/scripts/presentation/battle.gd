@@ -20,7 +20,6 @@ var spawned_this_wave: int = 0
 var spawn_target: int = 0
 var spawn_timer: float = 0.0
 var intermission_timer: float = 0.0
-var passive_energy_timer: float = 0.0
 var next_enemy_id: int = 1
 var battle_finished: bool = false
 var paused: bool = false
@@ -33,7 +32,7 @@ var enemies: Array = []
 var projectiles: Array = []
 var current_question: Dictionary = {}
 var arena
-var energy_label: Label
+var energy_button: Button
 var core_label: Label
 var wave_label: Label
 var score_label: Label
@@ -46,6 +45,8 @@ var reward_hint_label: Label
 var feedback_label: Label
 var pause_button: Button
 var answer_buttons: Array[Button] = []
+var question_popup: Control
+var question_popup_open: bool = false
 var guardian_buttons: Array[Button] = []
 var guardian_button_types: Array[String] = ["Plusy", "Addy Cannon", "Shield Cube"]
 
@@ -58,11 +59,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if battle_finished or paused:
 		return
-
-	passive_energy_timer += delta
-	if passive_energy_timer >= 8.0:
-		passive_energy_timer -= 8.0
-		energy = mini(999, energy + 1)
 
 	if spawned_this_wave < spawn_target:
 		spawn_timer += delta
@@ -88,9 +84,9 @@ func _process(delta: float) -> void:
 	_refresh_hud()
 
 func _build_ui() -> void:
-	# Latar sederhana. Arena menjadi fokus utama, bukan panel teks.
+	# UI berpalet vintage: kertas krem, tinta gelap, hijau hutan, dan emas antik.
 	var background := ColorRect.new()
-	background.color = Color("#102b24")
+	background.color = Color("#d8c9a8")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
@@ -109,24 +105,22 @@ func _build_ui() -> void:
 	outer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	margin.add_child(outer)
 
-	# HUD ala seed bank: energi, kartu Guardian, wave/Core, kontrol ringkas.
+	# Seed bank ringkas, dengan energi sebagai tombol untuk membuka tantangan matematika.
 	var header_panel := PanelContainer.new()
-	header_panel.custom_minimum_size = Vector2(0, 82)
-	header_panel.add_theme_stylebox_override("panel", _panel_style(Color("#18382e"), Color("#53764b"), 10, 6))
+	header_panel.custom_minimum_size = Vector2(0, 76)
+	header_panel.add_theme_stylebox_override("panel", _panel_style(Color("#243a29"), Color("#171a13"), 5, 5))
 	outer.add_child(header_panel)
 
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 6)
+	header.add_theme_constant_override("separation", 5)
 	header.alignment = BoxContainer.ALIGNMENT_CENTER
 	header_panel.add_child(header)
 
-	var brand := _make_label("NUMERIA", 18, Color("#d8efb3"), HORIZONTAL_ALIGNMENT_CENTER)
-	brand.custom_minimum_size = Vector2(88, 0)
-	header.add_child(brand)
-
-	energy_label = _make_label("☀  %d" % energy, 20, Color("#ffe49a"), HORIZONTAL_ALIGNMENT_CENTER)
-	energy_label.custom_minimum_size = Vector2(100, 0)
-	header.add_child(energy_label)
+	energy_button = _make_button("✦ %d" % energy, Vector2(98, 62), true)
+	energy_button.add_theme_font_size_override("font_size", 19)
+	energy_button.tooltip_text = "Ketuk untuk tantangan energi matematika"
+	energy_button.pressed.connect(_open_question_popup)
+	header.add_child(energy_button)
 
 	var seed_separator := VSeparator.new()
 	header.add_child(seed_separator)
@@ -134,7 +128,7 @@ func _build_ui() -> void:
 	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube"]
 	var card_titles: Dictionary = {"Plusy": "PLUSY\n50", "Addy Cannon": "ADDY\n100", "Shield Cube": "SHIELD\n75"}
 	for guardian_type in guardian_button_types:
-		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(112, 66), false)
+		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(104, 62), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		guardian_button.add_theme_font_size_override("font_size", 13)
 		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
@@ -146,32 +140,36 @@ func _build_ui() -> void:
 	header.add_child(spacer)
 
 	var status := VBoxContainer.new()
-	status.custom_minimum_size = Vector2(132, 0)
+	status.custom_minimum_size = Vector2(124, 0)
 	status.add_theme_constant_override("separation", 2)
 	header.add_child(status)
 	var status_top := HBoxContainer.new()
-	status_top.add_theme_constant_override("separation", 5)
+	status_top.add_theme_constant_override("separation", 4)
 	status.add_child(status_top)
-	wave_label = _make_label("WAVE 1/3", 13, Color("#f5e6b3"))
+	wave_label = _make_label("WAVE 1/3", 12, Color("#f4e8c9"))
 	wave_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_top.add_child(wave_label)
-	core_label = _make_label("CORE 100", 12, Color("#ffb6a9"), HORIZONTAL_ALIGNMENT_RIGHT)
+	core_label = _make_label("INTI 100", 11, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
 	status_top.add_child(core_label)
 	core_bar = ProgressBar.new()
 	core_bar.min_value = 0.0
 	core_bar.max_value = 100.0
 	core_bar.value = core_hp
 	core_bar.show_percentage = false
-	core_bar.custom_minimum_size = Vector2(0, 9)
+	core_bar.custom_minimum_size = Vector2(0, 8)
 	core_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#402e2c")))
-	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#e56d63")))
+	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#171a13")))
+	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#b95c49")))
 	status.add_child(core_bar)
-	wave_progress_label = _make_label("0/4 MUSUH", 10, Color("#b9d0b2"))
+	wave_progress_label = _make_label("0/4 MUSUH", 9, Color("#d7c9a8"))
 	status.add_child(wave_progress_label)
+	feedback_label = _make_label("SIAP", 9, Color("#e9c777"))
+	feedback_label.custom_minimum_size = Vector2(0, 12)
+	feedback_label.clip_text = true
+	status.add_child(feedback_label)
 
-	# Label ini tetap tersedia untuk statistik, tetapi tidak memenuhi HUD.
-	score_label = _make_label("SKOR 0", 10, Color("#fff4d6"))
+	# Statistik rinci disimpan untuk rekap akhir, bukan memenuhi HUD saat bermain.
+	score_label = _make_label("SKOR 0", 10, Color("#f4e8c9"))
 	score_label.visible = false
 	energy_bar = ProgressBar.new()
 	energy_bar.visible = false
@@ -179,20 +177,20 @@ func _build_ui() -> void:
 	energy_bar.max_value = 999.0
 	energy_bar.value = energy
 
-	pause_button = _make_button("Ⅱ", Vector2(54, 68), false)
+	pause_button = _make_button("Ⅱ", Vector2(48, 62), false)
 	pause_button.add_theme_font_size_override("font_size", 19)
 	pause_button.pressed.connect(_toggle_pause)
 	header.add_child(pause_button)
-	var menu_button := _make_button("⌂", Vector2(54, 68), false)
+	var menu_button := _make_button("⌂", Vector2(48, 62), false)
 	menu_button.add_theme_font_size_override("font_size", 20)
 	menu_button.pressed.connect(_return_to_menu)
 	header.add_child(menu_button)
 
-	# Arena mengisi ruang di antara seed bank dan bilah soal.
+	# Arena memakai seluruh ruang utama.
 	var arena_panel := PanelContainer.new()
 	arena_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	arena_panel.add_theme_stylebox_override("panel", _panel_style(Color("#1b482f"), Color("#587e45"), 8, 2))
+	arena_panel.add_theme_stylebox_override("panel", _panel_style(Color("#405b36"), Color("#171a13"), 4, 2))
 	outer.add_child(arena_panel)
 
 	arena = ArenaViewScript.new()
@@ -201,41 +199,56 @@ func _build_ui() -> void:
 	arena.slot_clicked.connect(_on_slot_clicked)
 	arena_panel.add_child(arena)
 
-	# Soal berada di luar arena. Selalu terlihat, tetapi tidak menutupi jalur.
-	var math_panel := PanelContainer.new()
-	math_panel.custom_minimum_size = Vector2(0, 94)
-	math_panel.add_theme_stylebox_override("panel", _panel_style(Color("#173a32"), Color("#426b4b"), 10, 6))
-	outer.add_child(math_panel)
+	# Tantangan matematika muncul hanya ketika pemain mengetuk tombol energi.
+	question_popup = Control.new()
+	question_popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	question_popup.visible = false
+	question_popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(question_popup)
 
-	var math_row := HBoxContainer.new()
-	math_row.add_theme_constant_override("separation", 7)
-	math_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	math_panel.add_child(math_row)
+	var shade := ColorRect.new()
+	shade.color = Color(0.06, 0.07, 0.04, 0.62)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	question_popup.add_child(shade)
 
-	math_heading = _make_label("SOAL", 12, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
-	math_heading.custom_minimum_size = Vector2(54, 0)
-	math_row.add_child(math_heading)
+	var popup_center := CenterContainer.new()
+	popup_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	popup_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	question_popup.add_child(popup_center)
 
-	question_label = _make_label("12 + 8 = ?", 25, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER)
-	question_label.custom_minimum_size = Vector2(142, 0)
-	math_row.add_child(question_label)
+	var popup_panel := PanelContainer.new()
+	popup_panel.custom_minimum_size = Vector2(470, 0)
+	popup_panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 16))
+	popup_center.add_child(popup_panel)
 
-	reward_hint_label = _make_label("+ ENERGI", 10, Color("#9fbdb2"), HORIZONTAL_ALIGNMENT_CENTER)
-	reward_hint_label.visible = false
+	var popup_content := VBoxContainer.new()
+	popup_content.add_theme_constant_override("separation", 8)
+	popup_panel.add_child(popup_content)
+	math_heading = _make_label("TANTANGAN ENERGI", 13, Color("#3d5a35"), HORIZONTAL_ALIGNMENT_CENTER)
+	popup_content.add_child(math_heading)
+	question_label = _make_label("12 + 8 = ?", 31, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER)
+	question_label.custom_minimum_size = Vector2(0, 48)
+	popup_content.add_child(question_label)
+	reward_hint_label = _make_label("BENAR +ENERGI  •  SALAH +10", 10, Color("#66583f"), HORIZONTAL_ALIGNMENT_CENTER)
+	popup_content.add_child(reward_hint_label)
 
+	var answer_row := HBoxContainer.new()
+	answer_row.add_theme_constant_override("separation", 7)
+	answer_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	popup_content.add_child(answer_row)
 	for index in range(4):
-		var answer_button := _make_button("?", Vector2(68, 72), true)
+		var answer_button := _make_button("?", Vector2(84, 58), false)
 		answer_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		answer_button.add_theme_font_size_override("font_size", 18)
+		answer_button.add_theme_font_size_override("font_size", 20)
 		answer_button.pressed.connect(_on_answer_pressed.bind(index))
 		answer_buttons.append(answer_button)
-		math_row.add_child(answer_button)
+		answer_row.add_child(answer_button)
 
-	feedback_label = _make_label("Jawab soal untuk energi.", 11, Color("#d2e5dc"))
-	feedback_label.custom_minimum_size = Vector2(154, 0)
-	feedback_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	math_row.add_child(feedback_label)
+	var close_button := _make_button("LANJUT BERMAIN", Vector2(0, 38), true)
+	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	close_button.pressed.connect(_close_question_popup)
+	popup_content.add_child(close_button)
 
 func _input(event: InputEvent) -> void:
 	# Drag kartu bekerja dengan mouse saat pengembangan dan sentuhan di Android.
@@ -306,20 +319,40 @@ func _difficulty_for_wave() -> String:
 		return "sedang"
 	return "sulit"
 
+func _open_question_popup() -> void:
+	if battle_finished or paused or question_popup_open:
+		return
+	question_popup_open = true
+	paused = true
+	question_popup.visible = true
+	for button in answer_buttons:
+		button.disabled = false
+	_refresh_hud()
+
+func _close_question_popup() -> void:
+	if not question_popup_open:
+		return
+	question_popup_open = false
+	paused = false
+	question_popup.visible = false
+	feedback_label.text = "LANJUT"
+	feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
+	_refresh_hud()
+
 func _new_question() -> void:
 	current_question = QuestionGenerator.make_question(_difficulty_for_wave())
 	question_label.text = "%d %s %d = ?" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
 	if is_instance_valid(math_heading):
-		math_heading.text = "SOAL"
+		math_heading.text = "TANTANGAN ENERGI"
 	if is_instance_valid(reward_hint_label):
-		reward_hint_label.text = "+%d ENERGI" % int(current_question["reward"])
+		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +10" % int(current_question["reward"])
 	var options: Array = current_question["options"]
 	for index in range(answer_buttons.size()):
 		answer_buttons[index].text = str(options[index])
 		answer_buttons[index].disabled = false
 
 func _on_answer_pressed(index: int) -> void:
-	if battle_finished or paused or index < 0 or index >= answer_buttons.size():
+	if battle_finished or (paused and not question_popup_open) or not question_popup_open or index < 0 or index >= answer_buttons.size():
 		return
 	var options: Array = current_question["options"]
 	if index >= options.size():
@@ -344,17 +377,21 @@ func _on_answer_pressed(index: int) -> void:
 		score += 100 + total_reward
 		var combo_text: String = " • KOMBO!" if combo_bonus > 0 else ""
 		feedback_label.text = "+%d energi%s" % [total_reward, combo_text]
-		feedback_label.add_theme_color_override("font_color", Color("#a6e6b8"))
+		feedback_label.add_theme_color_override("font_color", Color("#536943"))
 		if is_instance_valid(arena):
-			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#a6e6b8"), "+%d ENERGI" % total_reward)
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#d3ad5b"), "+%d ENERGI" % total_reward)
 	else:
 		wrong_answers += 1
 		combo = 0
 		energy = mini(999, energy + 10)
 		feedback_label.text = "%s = %d  •  +10 energi" % [question_text, correct]
-		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
+		feedback_label.add_theme_color_override("font_color", Color("#b95c49"))
 		if is_instance_valid(arena):
-			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#f2b4a8"), "JAWABAN %d" % correct)
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %d" % correct)
+	question_popup_open = false
+	if is_instance_valid(question_popup):
+		question_popup.visible = false
+	paused = false
 	_new_question()
 	_refresh_hud()
 
@@ -594,10 +631,10 @@ func _find_blocking_shield(enemy: Dictionary) -> int:
 	return -1
 
 func _refresh_hud() -> void:
-	if is_instance_valid(energy_label):
-		energy_label.text = "☀  %d" % energy
+	if is_instance_valid(energy_button):
+		energy_button.text = "✦ %d" % energy
 	if is_instance_valid(core_label):
-		core_label.text = "CORE %d" % core_hp
+		core_label.text = "INTI %d" % core_hp
 	if is_instance_valid(wave_label):
 		wave_label.text = "WAVE %d/3" % max(current_wave, 1)
 	if is_instance_valid(score_label):
@@ -618,14 +655,14 @@ func _refresh_hud() -> void:
 
 func _update_guardian_button_styles() -> void:
 	var card_colors: Dictionary = {
-		"Plusy": Color("#345e38"),
-		"Addy Cannon": Color("#2e5873"),
-		"Shield Cube": Color("#6b5730")
+		"Plusy": Color("#536943"),
+		"Addy Cannon": Color("#637e7a"),
+		"Shield Cube": Color("#9c783e")
 	}
 	var card_borders: Dictionary = {
-		"Plusy": Color("#8fce78"),
-		"Addy Cannon": Color("#83c9ed"),
-		"Shield Cube": Color("#e6c477")
+		"Plusy": Color("#d9d0a5"),
+		"Addy Cannon": Color("#d9d0a5"),
+		"Shield Cube": Color("#e8c36f")
 	}
 	for index in range(guardian_buttons.size()):
 		var guardian_type: String = guardian_button_types[index]
@@ -633,14 +670,14 @@ func _update_guardian_button_styles() -> void:
 		var can_afford: bool = energy >= int(GUARDIAN_COSTS[guardian_type])
 		guardian_buttons[index].disabled = not can_afford or paused or battle_finished
 		var base_color: Color = card_colors[guardian_type]
-		var border_color: Color = Color("#fff0b5") if is_selected else card_borders[guardian_type]
+		var border_color: Color = Color("#e8c36f") if is_selected else card_borders[guardian_type]
 		guardian_buttons[index].add_theme_stylebox_override("normal", _button_style(base_color.lightened(0.12) if is_selected else base_color, border_color, 7, 4))
 		guardian_buttons[index].add_theme_stylebox_override("hover", _button_style(base_color.lightened(0.24), border_color.lightened(0.15), 7, 4))
 		guardian_buttons[index].add_theme_stylebox_override("pressed", _button_style(base_color.darkened(0.12), border_color, 7, 4))
-		guardian_buttons[index].add_theme_color_override("font_color", Color("#fff8dc") if can_afford else Color("#9ba99b"))
+		guardian_buttons[index].add_theme_color_override("font_color", Color("#f5edd9") if can_afford else Color("#b3ad98"))
 
 func _toggle_pause() -> void:
-	if battle_finished:
+	if battle_finished or question_popup_open:
 		return
 	paused = not paused
 	pause_button.text = ">" if paused else "||"
@@ -656,6 +693,9 @@ func _finish_battle(victory: bool) -> void:
 		return
 	battle_finished = true
 	paused = false
+	question_popup_open = false
+	if is_instance_valid(question_popup):
+		question_popup.visible = false
 	selected_guardian = ""
 	_save_best_score()
 	if is_instance_valid(arena):
@@ -668,7 +708,7 @@ func _finish_battle(victory: bool) -> void:
 		pause_button.disabled = true
 
 	var overlay := ColorRect.new()
-	overlay.color = Color(0.02, 0.07, 0.07, 0.84)
+	overlay.color = Color(0.06, 0.07, 0.04, 0.84)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(overlay)
@@ -677,27 +717,27 @@ func _finish_battle(victory: bool) -> void:
 	overlay.add_child(center)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(540, 360)
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("#1a4140"), Color("#8ccca2"), 20, 22))
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 22))
 	center.add_child(panel)
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 11)
 	panel.add_child(content)
 	var title_text: String = "NUMERIA SELAMAT!" if victory else "CORE NUMERIA RUNTUH"
 	var detail_text: String = "Hebat! Kamu berhasil melewati semua wave." if victory else "Coba susun Guardian pada jalur yang berbeda dan jawab soal untuk memperoleh energi."
-	var title := _make_label(title_text, 26, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER)
+	var title := _make_label(title_text, 26, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER)
 	content.add_child(title)
-	var detail := _make_label(detail_text, 14, Color("#c2d9d3"), HORIZONTAL_ALIGNMENT_CENTER)
+	var detail := _make_label(detail_text, 14, Color("#4c4b38"), HORIZONTAL_ALIGNMENT_CENTER)
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(detail)
 	var accuracy: int = roundi(float(correct_answers) / float(maxi(total_questions, 1)) * 100.0)
-	var stats := _make_label("Skor %d  •  Musuh dikalahkan %d\nBenar %d  •  Salah %d  •  Akurasi %d%%" % [score, defeated_enemies, correct_answers, wrong_answers, accuracy], 13, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
+	var stats := _make_label("Skor %d  •  Musuh dikalahkan %d\nBenar %d  •  Salah %d  •  Akurasi %d%%" % [score, defeated_enemies, correct_answers, wrong_answers, accuracy], 13, Color("#3d5a35"), HORIZONTAL_ALIGNMENT_CENTER)
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	stats.custom_minimum_size = Vector2(0, 42)
 	content.add_child(stats)
 	var review_button := _make_button("LIHAT PEMBAHASAN SOAL", Vector2(0, 36), false)
 	review_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_child(review_button)
-	var review_label := _make_label(_build_review_text(), 12, Color("#d2e5dc"), HORIZONTAL_ALIGNMENT_CENTER)
+	var review_label := _make_label(_build_review_text(), 12, Color("#4c4b38"), HORIZONTAL_ALIGNMENT_CENTER)
 	review_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	review_label.custom_minimum_size = Vector2(0, 96)
 	review_label.visible = false
@@ -754,12 +794,12 @@ func _make_button(value: String, minimum_size: Vector2, primary: bool) -> Button
 	button.text = value
 	button.custom_minimum_size = minimum_size
 	button.add_theme_font_size_override("font_size", 15 if primary else 13)
-	button.add_theme_color_override("font_color", Color("#102b32") if primary else Color("#e5f1e9"))
-	button.add_theme_color_override("font_hover_color", Color("#102b32") if primary else Color("#ffffff"))
-	button.add_theme_stylebox_override("normal", _button_style(Color("#a6e6b8") if primary else Color("#28564c"), Color("#c6f2d2") if primary else Color("#4d7b68"), 10, 8))
-	button.add_theme_stylebox_override("hover", _button_style(Color("#c1f2cb") if primary else Color("#36705d"), Color("#e0ffe5") if primary else Color("#76a88d"), 10, 8))
-	button.add_theme_stylebox_override("pressed", _button_style(Color("#81c99b") if primary else Color("#1c423a"), Color("#a6e6b8") if primary else Color("#4d7b68"), 10, 8))
-	button.add_theme_stylebox_override("focus", _button_style(Color(0.0, 0.0, 0.0, 0.0), Color("#fff4d6"), 10, 8))
+	button.add_theme_color_override("font_color", Color("#171a13") if primary else Color("#f4e8c9"))
+	button.add_theme_color_override("font_hover_color", Color("#171a13") if primary else Color("#fff9e8"))
+	button.add_theme_stylebox_override("normal", _button_style(Color("#d3ad5b") if primary else Color("#31482f"), Color("#171a13"), 5, 8))
+	button.add_theme_stylebox_override("hover", _button_style(Color("#e4c779") if primary else Color("#455f3d"), Color("#171a13"), 5, 8))
+	button.add_theme_stylebox_override("pressed", _button_style(Color("#b78e42") if primary else Color("#223521"), Color("#171a13"), 5, 8))
+	button.add_theme_stylebox_override("focus", _button_style(Color(0.0, 0.0, 0.0, 0.0), Color("#e8c36f"), 5, 8))
 	return button
 
 func _meter_style(background: Color) -> StyleBoxFlat:
@@ -777,6 +817,7 @@ func _panel_style(background: Color, border: Color, radius: int, padding: int) -
 	style.bg_color = background
 	style.border_color = border
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(radius)
+	style.set_corner_radius_all(mini(radius, 5))
+	style.set_border_width_all(2)
 	style.set_content_margin_all(padding)
 	return style

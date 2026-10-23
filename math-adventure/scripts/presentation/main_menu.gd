@@ -8,13 +8,13 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	var background := ColorRect.new()
-	background.color = Color("#102b24")
+	background.color = Color("#1c251b")
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
 
 	var lower_glow := ColorRect.new()
-	lower_glow.color = Color("#173d2d")
+	lower_glow.color = Color("#31472d")
 	lower_glow.anchor_left = 0.0
 	lower_glow.anchor_top = 0.72
 	lower_glow.anchor_right = 1.0
@@ -34,18 +34,18 @@ func _build_ui() -> void:
 	column.add_theme_constant_override("separation", 10)
 	center.add_child(column)
 
-	var eyebrow := _make_label("DUNIA NUMERIA", 15, Color("#9fe3bd"), HORIZONTAL_ALIGNMENT_CENTER)
+	var eyebrow := _make_label("ADDITION FOREST", 15, Color("#d3ad5b"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(eyebrow)
 
-	var title := _make_label("MATH-ADVENTURE", 42, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER)
+	var title := _make_label("MATH-ADVENTURE", 42, Color("#f1e4c7"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(title)
 
-	var subtitle := _make_label("Jawab soal. Kumpulkan energi. Lindungi Numeria.", 17, Color("#c2d9d3"), HORIZONTAL_ALIGNMENT_CENTER)
+	var subtitle := _make_label("Hitung. Bertahan. Menang.", 17, Color("#d9d0a5"), HORIZONTAL_ALIGNMENT_CENTER)
 	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(subtitle)
 
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _panel_style(Color("#183d32"), Color("#527b50"), 18, 18))
+	card.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 18))
 	column.add_child(card)
 
 	var card_content := VBoxContainer.new()
@@ -71,7 +71,7 @@ func _build_ui() -> void:
 	var save_data := ConfigFile.new()
 	save_data.load("user://math_adventure.cfg")
 	var best_score: int = int(save_data.get_value("stats", "best_score", 0))
-	var record := _make_label("REKOR %d" % best_score, 12, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
+	var record := _make_label("REKOR %d" % best_score, 12, Color("#e8c36f"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(record)
 
 func _show_help() -> void:
@@ -90,14 +90,14 @@ func _show_help() -> void:
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(520, 0)
-	panel.add_theme_stylebox_override("panel", _panel_style(Color("#1a4140"), Color("#8ccca2"), 20, 24))
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 24))
 	center.add_child(panel)
 
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	panel.add_child(content)
-	content.add_child(_make_label("CARA BERMAIN", 24, Color("#fff4d6"), HORIZONTAL_ALIGNMENT_CENTER))
-	var instructions := _make_label("1. Seret kartu Guardian ke petak kosong. Kamu juga bisa mengetuk kartu lalu petak.\n2. Jawab soal di bilah bawah untuk mendapatkan energi.\n3. Plusy menghasilkan energi, Addy menyerang, dan Shield menahan musuh.\n4. Jaga Core dan selesaikan tiga wave.", 15, Color("#d2e5dc"))
+	content.add_child(_make_label("CARA BERMAIN", 24, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER))
+	var instructions := _make_label("1. Seret kartu Guardian ke petak kosong, atau ketuk kartu lalu petak.\n2. Ketuk energi untuk menjawab soal dan mendapat energi.\n3. Plusy menghasilkan energi, Addy menyerang, Shield menahan musuh.\n4. Jaga Core dan selesaikan tiga wave.", 15, Color("#4c4b38"))
 	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(instructions)
 	var close_button := _make_button("MENGERTI", Vector2(0, 44), true)
@@ -130,12 +130,12 @@ func _make_button(value: String, minimum_size: Vector2, primary: bool) -> Button
 	button.text = value
 	button.custom_minimum_size = minimum_size
 	button.add_theme_font_size_override("font_size", 17 if primary else 13)
-	button.add_theme_color_override("font_color", Color("#102b32") if primary else Color("#e5f1e9"))
-	button.add_theme_color_override("font_hover_color", Color("#102b32") if primary else Color("#ffffff"))
-	button.add_theme_stylebox_override("normal", _panel_style(Color("#a6e6b8") if primary else Color("#28564c"), Color("#c6f2d2") if primary else Color("#4d7b68"), 12, 10))
-	button.add_theme_stylebox_override("hover", _panel_style(Color("#c1f2cb") if primary else Color("#36705d"), Color("#e0ffe5") if primary else Color("#76a88d"), 12, 10))
-	button.add_theme_stylebox_override("pressed", _panel_style(Color("#81c99b") if primary else Color("#1c423a"), Color("#a6e6b8") if primary else Color("#4d7b68"), 12, 10))
-	button.add_theme_stylebox_override("focus", _panel_style(Color(0.0, 0.0, 0.0, 0.0), Color("#fff4d6"), 12, 10))
+	button.add_theme_color_override("font_color", Color("#171a13") if primary else Color("#f4e8c9"))
+	button.add_theme_color_override("font_hover_color", Color("#171a13") if primary else Color("#fff9e8"))
+	button.add_theme_stylebox_override("normal", _panel_style(Color("#d3ad5b") if primary else Color("#31482f"), Color("#171a13"), 5, 10))
+	button.add_theme_stylebox_override("hover", _panel_style(Color("#e4c779") if primary else Color("#455f3d"), Color("#171a13"), 5, 10))
+	button.add_theme_stylebox_override("pressed", _panel_style(Color("#b78e42") if primary else Color("#223521"), Color("#171a13"), 5, 10))
+	button.add_theme_stylebox_override("focus", _panel_style(Color(0.0, 0.0, 0.0, 0.0), Color("#e8c36f"), 5, 10))
 	return button
 
 func _panel_style(background: Color, border: Color, radius: int, padding: int) -> StyleBoxFlat:
@@ -143,6 +143,7 @@ func _panel_style(background: Color, border: Color, radius: int, padding: int) -
 	style.bg_color = background
 	style.border_color = border
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(radius)
+	style.set_corner_radius_all(mini(radius, 5))
+	style.set_border_width_all(2)
 	style.set_content_margin_all(padding)
 	return style

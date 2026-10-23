@@ -1,65 +1,64 @@
 # Math-Adventure
 
-Math-Adventure adalah game edukasi matematika tower defense untuk perangkat mobile, dibuat dengan Godot 4.7.2. Pemain menjawab soal, mengumpulkan Math Energy, lalu menempatkan Math Guardian untuk melindungi Core Numeria.
+Math-Adventure adalah game edukasi matematika tower defense untuk Android, dibuat dengan Godot 4.7.2. Pemain menggunakan Math Energy untuk memanggil Guardian dan menjawab tantangan matematika saat membutuhkan energi.
 
 ## Target perangkat
 
 - Fokus utama: Android.
-- Orientasi: landscape (horizontal), sesuai permainan lane-defense.
-- Semua interaksi utama memakai sentuhan layar. Tidak diperlukan keyboard.
-- Resolusi dasar 1280 × 720 dengan pengaturan stretch agar menyesuaikan layar.
+- Orientasi: landscape (horizontal).
+- Interaksi utama menggunakan layar sentuh.
+- Resolusi dasar: 1280 × 720 dengan stretch agar menyesuaikan layar.
 
-## Menjalankan game di Godot
+## Menjalankan proyek
 
 1. Buka Godot Project Manager.
-2. Pilih **Import** dan pilih `project.godot` di folder proyek ini jika proyek belum muncul di daftar.
-3. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F5** untuk pengujian di komputer.
-4. Untuk mencoba di Android, siapkan Android export template, JDK, Android SDK, lalu atur ekspor melalui Godot Editor Settings dan Project > Export. Petunjuk tersedia di `docs/ANDROID_EXPORT_GUIDE.md`.
+2. Pilih **Import** dan pilih `project.godot` di folder ini jika proyek belum terdaftar.
+3. Buka proyek, tunggu proses impor selesai, lalu tekan **F5**.
+4. Petunjuk ekspor Android ada di `docs/ANDROID_EXPORT_GUIDE.md`.
 
-## Fitur MVP 0.6 Mobile UI
+## Fitur versi 0.8
 
-- Menu utama ringkas berbahasa Indonesia dengan panduan singkat dan rekor skor terbaik.
-- Arena 3 jalur dan 6 kolom dengan petak sentuh untuk menempatkan Guardian.
-- Highlight petak hijau saat siap ditempati dan merah untuk petak terisi.
-- HUD ringkas: energi, kartu Guardian, wave, dan HP Core. Statistik lengkap ditampilkan setelah permainan.
-- Soal penjumlahan dan pengurangan berada pada bilah bawah di luar arena agar tidak menutupi jalur.
-- Kesulitan soal meningkat setiap wave: mudah, sedang, lalu sulit.
-- Reward jawaban benar mengikuti kesulitan: +30, +50, dan +80 Math Energy.
-- Jawaban salah menampilkan kembali operasi dan hasil yang benar.
-- Combo tiga jawaban benar berturut-turut memberi bonus +10 energi.
-- Plusy menghasilkan +5 energi setiap 5 detik.
-- Addy Cannon menembakkan proyektil yang terlihat dan memberi 10 damage.
-- Shield Cube memiliki 300 HP dan menahan musuh pada jalurnya.
-- Tiga wave dengan 18 musuh total, termasuk Error Blob, Minus Monster, dan Calculator Bug.
-- Tombol sentuh ikon jeda dan menu; ukuran kontrol ditingkatkan untuk landscape mobile.
-- Rekap akhir menampilkan jumlah jawaban benar, salah, akurasi, serta pembahasan empat jawaban salah terakhir.
-- Rekor skor terbaik disimpan lokal di `user://math_adventure.cfg`.
-- Animasi dan efek visual prosedural tanpa aset eksternal.
+- Menu ringkas dengan palet vintage: krem, tinta gelap, hijau hutan, dan emas antik.
+- HUD seed-bank sederhana dengan tombol energi, tiga kartu Guardian, wave, HP Inti, jeda, dan menu.
+- Tantangan matematika hanya muncul ketika pemain mengetuk tombol energi. Permainan berhenti sementara agar pemain bisa menjawab tanpa tekanan.
+- Empat pilihan jawaban. Jawaban benar memberi energi sesuai kesulitan, jawaban salah tetap memberi +10 energi dan menampilkan hasil benar pada status.
+- Arena tiga jalur dan enam kolom.
+- Guardian dapat ditempatkan dengan drag-and-drop atau mengetuk kartu lalu petak.
+- Plusy menghasilkan +5 energi setiap 5 detik. Addy Cannon menembakkan proyektil. Shield Cube menahan musuh.
+- Tiga wave dengan total 18 musuh, termasuk Error Blob, Minus Monster, dan Calculator Bug.
+- Jeda, kembali ke menu, rekap akhir, pembahasan soal salah, dan rekor skor lokal.
+- Loader aset PNG opsional. Jika file PNG belum tersedia, game menggunakan ilustrasi prosedural sebagai fallback.
 
-## Kontrol layar sentuh
+## Arah visual
 
-1. Seret kartu Guardian dari HUD atas ke petak kosong di arena.
-2. Alternatif: ketuk kartu Guardian, lalu ketuk petak kosong.
-3. Jawab soal pada bilah bawah untuk memperoleh energi.
-4. Ketuk ikon jeda untuk menghentikan atau melanjutkan permainan.
-5. Ketuk ikon rumah untuk kembali ke menu utama.
+Arah seni versi berikutnya adalah kartun tinta klasik era 1930-an dengan desain karakter orisinal. Nuansanya mengambil inspirasi dari teknik animasi vintage, bukan menyalin karakter, logo, atau aset dari game lain. Dunia tetap bertema Addition Forest.
 
-## Struktur
+Lihat `docs/ART_DIRECTION_V0.8.md` untuk palet warna, daftar nama file aset, ukuran yang disarankan, dan panduan penempatan.
+
+## Lokasi aset PNG
+
+- Latar arena: `assets/backgrounds/addition_forest_bg.png`
+- Guardian: `assets/characters/plusy.png`, `addy_cannon.png`, `shield_cube.png`
+- Musuh: `assets/characters/error_blob.png`, `minus_monster.png`, `calculator_bug.png`
+
+Loader akan memakai file PNG jika sudah tersedia. File tersebut belum disertakan dalam paket v0.8. Sampai aset dibuat, ilustrasi prosedural tetap digunakan sebagai fallback.
+
+## Struktur proyek
 
 - `scenes/`: scene Godot.
 - `scripts/presentation/`: menu, arena, dan battle.
-- `scripts/domain/`: pembuat soal dan aturan matematika.
-- `data/`: contoh bank soal.
-- `assets/`: aset orisinal tambahan bila diperlukan.
-- `resources/`: resource Godot untuk data karakter/level jika ditambahkan.
-- `docs/`: dokumentasi proyek dan dokumen desain asli.
+- `scripts/domain/`: generator soal dan aturan matematika.
+- `data/`: bank soal.
+- `assets/`: gambar, font, dan audio.
+- `resources/`: resource Godot.
+- `docs/`: dokumentasi dan dokumen desain asli.
 
-## Git dan backup
+## GitHub backup
 
-Folder `.godot/` berisi cache lokal Godot dan dikecualikan oleh `.gitignore`. Jangan membuat repository Git baru di dalam folder proyek karena repository induk sudah berada di `Pengantar-Game`.
+Repository Git tetap berada di folder induk `Pengantar-Game`. Jangan membuat repository baru di dalam folder proyek. Folder `.godot/` dikecualikan oleh `.gitignore`.
 
-Setelah fitur penting diuji, buat commit di GitHub Desktop dan klik **Push origin** untuk mengirim checkpoint ke GitHub.
+Setelah versi diuji, buat commit di GitHub Desktop dan klik **Push origin**.
 
 ## Status pengujian
 
-Pembaruan layout dan drag-and-drop ditinjau secara statis. Jalankan pada Godot 4.7.2, kemudian uji pada perangkat Android sebelum menganggap build siap dirilis.
+Struktur arsip, file konfigurasi, referensi scene, dan perubahan script sudah diperiksa secara statis. Proyek belum dijalankan langsung di editor Godot 4.7.2 pada lingkungan pembuatan paket ini. Uji menu, tantangan energi, penempatan Guardian, wave, dan kondisi menang/kalah sebelum menyimpan checkpoint.
