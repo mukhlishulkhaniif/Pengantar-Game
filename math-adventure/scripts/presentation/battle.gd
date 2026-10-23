@@ -37,6 +37,9 @@ var energy_label: Label
 var core_label: Label
 var wave_label: Label
 var score_label: Label
+var wave_progress_label: Label
+var core_bar: ProgressBar
+var energy_bar: ProgressBar
 var question_label: Label
 var math_heading: Label
 var reward_hint_label: Label
@@ -121,6 +124,52 @@ func _build_ui() -> void:
 	header.add_child(wave_label)
 	score_label = _make_label("SKOR  0", 15, Color("#e9c6ff"))
 	header.add_child(score_label)
+
+	# Meter status membuat kondisi permainan terbaca tanpa menutupi arena.
+	var status_row := HBoxContainer.new()
+	status_row.add_theme_constant_override("separation", 14)
+	status_row.custom_minimum_size = Vector2(0, 42)
+	outer.add_child(status_row)
+
+	var core_meter := VBoxContainer.new()
+	core_meter.custom_minimum_size = Vector2(190, 0)
+	core_meter.add_theme_constant_override("separation", 2)
+	status_row.add_child(core_meter)
+	core_meter.add_child(_make_label("KEKUATAN CORE", 10, Color("#f5d57d")))
+	core_bar = ProgressBar.new()
+	core_bar.min_value = 0.0
+	core_bar.max_value = 100.0
+	core_bar.value = core_hp
+	core_bar.show_percentage = false
+	core_bar.custom_minimum_size = Vector2(180, 12)
+	core_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#3a3030")))
+	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#e9b85c")))
+	core_meter.add_child(core_bar)
+
+	var energy_meter := VBoxContainer.new()
+	energy_meter.custom_minimum_size = Vector2(190, 0)
+	energy_meter.add_theme_constant_override("separation", 2)
+	status_row.add_child(energy_meter)
+	energy_meter.add_child(_make_label("MATH ENERGY", 10, Color("#a6e6b8")))
+	energy_bar = ProgressBar.new()
+	energy_bar.min_value = 0.0
+	energy_bar.max_value = 999.0
+	energy_bar.value = energy
+	energy_bar.show_percentage = false
+	energy_bar.custom_minimum_size = Vector2(180, 12)
+	energy_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	energy_bar.add_theme_stylebox_override("background", _meter_style(Color("#18332f")))
+	energy_bar.add_theme_stylebox_override("fill", _meter_style(Color("#68d99b")))
+	energy_meter.add_child(energy_bar)
+
+	var progress_box := VBoxContainer.new()
+	progress_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	progress_box.add_theme_constant_override("separation", 2)
+	status_row.add_child(progress_box)
+	progress_box.add_child(_make_label("PROGRES PERTEMPURAN", 10, Color("#c9d9f4")))
+	wave_progress_label = _make_label("Musuh 0/4  •  Kalah 0  •  Akurasi 0%", 12, Color("#d2e5dc"))
+	progress_box.add_child(wave_progress_label)
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 12)
@@ -239,16 +288,22 @@ func _on_answer_pressed(index: int) -> void:
 		combo += 1
 		var reward: int = int(current_question["reward"])
 		var combo_bonus: int = 10 if combo % 3 == 0 else 0
-		energy = mini(999, energy + reward + combo_bonus)
-		score += 100 + reward + combo_bonus
+		var total_reward: int = reward + combo_bonus
+		energy = mini(999, energy + total_reward)
+		score += 100 + total_reward
 		var combo_text: String = " Combo %d!" % combo if combo_bonus > 0 else ""
-		feedback_label.text = "Benar! +%d energi.%s" % [reward + combo_bonus, combo_text]
+		feedback_label.text = "Benar! +%d energi.%s" % [total_reward, combo_text]
 		feedback_label.add_theme_color_override("font_color", Color("#a6e6b8"))
+		if is_instance_valid(arena):
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 38.0), Color("#a6e6b8"), "+%d ENERGI" % total_reward)
 	else:
 		combo = 0
 		energy = mini(999, energy + 10)
-		feedback_label.text = "Belum tepat. Jawaban: %d. +10 energi, tetap semangat!" % correct
+		var explanation: String = "%d %s %d = %d" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"]), correct]
+		feedback_label.text = "Belum tepat. %s. +10 energi, tetap semangat!" % explanation
 		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
+		if is_instance_valid(arena):
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 38.0), Color("#f2b4a8"), "JAWABAN: %d" % correct)
 	_new_question()
 	_refresh_hud()
 
@@ -291,6 +346,9 @@ func _on_slot_clicked(lane: int, column: int) -> void:
 		"cooldown": 0.0,
 		"energy_timer": 0.0
 	})
+	if is_instance_valid(arena):
+		var placed_guardian: Dictionary = guardians[guardians.size() - 1]
+		arena.add_visual_effect("spawn", arena.get_guardian_center(placed_guardian), Color("#a6e6b8"), "SIAP!")
 	feedback_label.text = "%s berhasil ditempatkan!" % selected_guardian
 	feedback_label.add_theme_color_override("font_color", Color("#a6e6b8"))
 	selected_guardian = ""
@@ -308,6 +366,8 @@ func _start_next_wave() -> void:
 	_new_question()
 	feedback_label.text = "Wave %d dimulai! Lindungi Core Numeria." % current_wave
 	feedback_label.add_theme_color_override("font_color", Color("#fff4d6"))
+	if is_instance_valid(arena):
+		arena.add_visual_effect("wave", Vector2(maxf(arena.size.x * 0.5, 320.0), 46.0), Color("#f5d57d"), "WAVE %d DIMULAI" % current_wave)
 
 func _spawn_enemy() -> void:
 	var enemy_type: String = "Error Blob"
@@ -355,6 +415,8 @@ func _update_guardians(delta: float) -> void:
 			if float(guardian["energy_timer"]) >= 5.0:
 				guardian["energy_timer"] = float(guardian["energy_timer"]) - 5.0
 				energy = mini(999, energy + 5)
+				if is_instance_valid(arena):
+					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+5")
 		elif guardian_type == "Addy Cannon":
 			guardian["cooldown"] = float(guardian.get("cooldown", 0.0)) - delta
 			if float(guardian["cooldown"]) <= 0.0:
@@ -370,6 +432,7 @@ func _update_guardians(delta: float) -> void:
 						"speed": 430.0,
 						"damage": 10
 					})
+					arena.add_visual_effect("muzzle", guardian_center + Vector2(23.0, -5.0), Color("#a8e9ff"))
 					guardian["cooldown"] = 0.9
 		guardians[index] = guardian
 
@@ -397,8 +460,11 @@ func _update_projectiles(delta: float) -> void:
 		var target: Dictionary = enemies[target_index]
 		projectile["x"] = float(projectile["x"]) + float(projectile["speed"]) * delta
 		if float(projectile["x"]) >= float(target["x"]) - 14.0:
-			target["hp"] = int(target["hp"]) - int(projectile.get("damage", 10))
+			var damage: int = int(projectile.get("damage", 10))
+			target["hp"] = int(target["hp"]) - damage
 			enemies[target_index] = target
+			if is_instance_valid(arena):
+				arena.add_visual_effect("hit", Vector2(float(target["x"]), arena.get_lane_center(int(target["lane"]))), Color("#ffd18c"), "-%d" % damage)
 			projectiles.remove_at(index)
 		else:
 			projectiles[index] = projectile
@@ -413,6 +479,8 @@ func _update_enemies(delta: float) -> void:
 	for index in range(enemies.size() - 1, -1, -1):
 		var enemy: Dictionary = enemies[index]
 		if int(enemy["hp"]) <= 0:
+			if is_instance_valid(arena):
+				arena.add_visual_effect("defeat", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#a6e6b8"), "+20")
 			enemies.remove_at(index)
 			defeated_enemies += 1
 			score += 20
@@ -425,7 +493,11 @@ func _update_enemies(delta: float) -> void:
 				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.0
 				var shield: Dictionary = guardians[shield_index]
 				shield["hp"] = int(shield.get("hp", 300)) - 15
+				if is_instance_valid(arena):
+					arena.add_visual_effect("hit", arena.get_guardian_center(shield), Color("#f2b4a8"), "-15")
 				if int(shield["hp"]) <= 0:
+					if is_instance_valid(arena):
+						arena.add_visual_effect("defeat", arena.get_guardian_center(shield), Color("#f2b4a8"), "HANCUR")
 					guardians.remove_at(shield_index)
 					feedback_label.text = "Shield Cube hancur. Coba lindungi jalur ini lagi."
 				else:
@@ -434,7 +506,10 @@ func _update_enemies(delta: float) -> void:
 		else:
 			enemy["x"] = float(enemy["x"]) - float(enemy["speed"]) * delta
 			if float(enemy["x"]) <= 18.0:
-				core_hp -= int(enemy.get("core_damage", 20))
+				var core_damage_amount: int = int(enemy.get("core_damage", 20))
+				core_hp -= core_damage_amount
+				if is_instance_valid(arena):
+					arena.add_visual_effect("hit", Vector2(26.0, arena.get_lane_center(int(enemy["lane"]))), Color("#f2b4a8"), "CORE -%d" % core_damage_amount)
 				if str(enemy["type"]) == "Minus Monster":
 					energy = maxi(0, energy - 15)
 					feedback_label.text = "Minus Monster menyerang! Core -20, energi -15."
@@ -465,6 +540,13 @@ func _refresh_hud() -> void:
 		core_label.text = "CORE  %d/100" % core_hp
 		wave_label.text = "WAVE  %d/3" % max(current_wave, 1)
 		score_label.text = "SKOR  %d" % score
+	if is_instance_valid(core_bar):
+		core_bar.value = core_hp
+	if is_instance_valid(energy_bar):
+		energy_bar.value = energy
+	if is_instance_valid(wave_progress_label):
+		var accuracy: int = roundi(float(correct_answers) / float(total_questions) * 100.0) if total_questions > 0 else 0
+		wave_progress_label.text = "Musuh %d/%d  •  Kalah %d  •  Akurasi %d%%" % [spawned_this_wave, spawn_target, defeated_enemies, accuracy]
 	if is_instance_valid(arena):
 		arena.guardians = guardians
 		arena.enemies = enemies
@@ -500,6 +582,7 @@ func _finish_battle(victory: bool) -> void:
 	battle_finished = true
 	paused = false
 	selected_guardian = ""
+	_save_best_score()
 	if is_instance_valid(arena):
 		arena.placement_enabled = false
 	for button in answer_buttons:
@@ -544,6 +627,14 @@ func _finish_battle(victory: bool) -> void:
 	menu.pressed.connect(_return_to_menu)
 	content.add_child(menu)
 
+func _save_best_score() -> void:
+	var save_data := ConfigFile.new()
+	save_data.load("user://math_adventure.cfg")
+	var previous_best: int = int(save_data.get_value("stats", "best_score", 0))
+	if score > previous_best:
+		save_data.set_value("stats", "best_score", score)
+		save_data.save("user://math_adventure.cfg")
+
 func _return_to_menu() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
 
@@ -568,6 +659,13 @@ func _make_button(value: String, minimum_size: Vector2, primary: bool) -> Button
 	button.add_theme_stylebox_override("pressed", _button_style(Color("#81c99b") if primary else Color("#1c423a"), Color("#a6e6b8") if primary else Color("#4d7b68"), 10, 8))
 	button.add_theme_stylebox_override("focus", _button_style(Color(0.0, 0.0, 0.0, 0.0), Color("#fff4d6"), 10, 8))
 	return button
+
+func _meter_style(background: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = background
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(0)
+	return style
 
 func _button_style(background: Color, border: Color, radius: int, padding: int) -> StyleBoxFlat:
 	return _panel_style(background, border, radius, padding)

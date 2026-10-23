@@ -89,7 +89,13 @@ func _build_ui() -> void:
 	var hint := _make_label("3 jalur  •  3 wave  •  Penjumlahan & pengurangan", 13, Color("#9fbdb2"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(hint)
 
-	var version := _make_label("PROTOTIPE 0.2 • GODOT 4.7", 10, Color("#70968c"), HORIZONTAL_ALIGNMENT_CENTER)
+	var save_data := ConfigFile.new()
+	save_data.load("user://math_adventure.cfg")
+	var best_score: int = int(save_data.get_value("stats", "best_score", 0))
+	var record := _make_label("REKOR TERBAIK: %d" % best_score, 12, Color("#a6e6b8"), HORIZONTAL_ALIGNMENT_CENTER)
+	column.add_child(record)
+
+	var version := _make_label("PROTOTIPE 0.4 • GODOT 4.7.2", 10, Color("#70968c"), HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(version)
 
 func _show_help() -> void:

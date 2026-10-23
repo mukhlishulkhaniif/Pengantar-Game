@@ -8,31 +8,39 @@ Math-Adventure adalah game edukasi matematika bergaya lane-defense untuk Godot 4
 2. Pilih **Import** dan pilih `project.godot` di folder proyek ini jika proyek belum muncul di daftar.
 3. Buka proyek, tunggu Godot menyelesaikan impor, lalu tekan **F5**.
 
-## Fitur MVP 0.2
+## Fitur MVP 0.4
 
-- Menu utama bahasa Indonesia dengan panduan cara bermain.
-- Layar 1280 × 720 dan jendela yang terbuka maksimal.
-- Arena 3 jalur dan 6 kolom untuk menempatkan Guardian.
+- Menu utama berbahasa Indonesia dengan panduan bermain dan rekor skor terbaik.
+- Layar 1280 × 720, dengan pengaturan layar yang dapat diperbesar.
+- Arena 3 jalur dan 6 kolom dengan highlight petak saat mouse diarahkan untuk menempatkan Guardian.
+- Petak terisi diberi highlight merah saat diarahkan, petak kosong diberi highlight hijau.
+- Meter visual untuk kekuatan Core dan Math Energy, serta informasi progres wave, musuh yang sudah muncul, musuh yang dikalahkan, dan akurasi jawaban.
 - Soal penjumlahan dan pengurangan dengan empat pilihan jawaban.
 - Kesulitan soal meningkat setiap wave: mudah, sedang, lalu sulit.
 - Reward jawaban benar mengikuti kesulitan: +30, +50, dan +80 Math Energy.
-- Jawaban salah tetap memberi +10 energi dan menampilkan jawaban yang benar.
+- Jawaban salah menampilkan kembali operasi dan hasil yang benar sebagai umpan balik belajar.
 - Combo tiga jawaban benar berturut-turut memberi bonus +10 energi.
 - Plusy menghasilkan +5 energi setiap 5 detik.
 - Addy Cannon menembakkan proyektil yang terlihat dan memberi 10 damage.
 - Shield Cube memiliki 300 HP dan menahan musuh pada jalurnya.
 - Tiga wave dengan 18 musuh total, termasuk Error Blob, Minus Monster, dan Calculator Bug.
 - Minus Monster mengurangi energi jika mencapai Core; Calculator Bug bergerak lebih cepat.
-- Tombol jeda, skor, jumlah musuh yang dikalahkan, akurasi jawaban, layar menang/kalah, dan tombol main lagi.
-- Seluruh visual karakter dan arena digambar menggunakan kode. Tidak membutuhkan aset PvZ atau unduhan eksternal.
+- Tombol jeda, skor, statistik musuh, akurasi, layar menang/kalah, dan tombol main lagi.
+- Rekor skor terbaik disimpan lokal di `user://math_adventure.cfg`.
+- Animasi idle ringan untuk Guardian dan musuh agar arena terasa hidup.
+- Efek visual prosedural untuk penempatan Guardian, tembakan, benturan, musuh kalah, dan kerusakan Core.
+- Pop-up energi dan skor yang muncul langsung di arena sebagai umpan balik aksi pemain.
+- Proyektil memiliki cahaya dan jejak yang lebih jelas.
+- Visual arena dan karakter dibuat menggunakan kode. Tidak membutuhkan aset PvZ atau unduhan eksternal.
 
 ## Kontrol
 
 1. Pilih salah satu jawaban matematika di panel kanan.
 2. Pilih Guardian yang tersedia sesuai energi.
-3. Klik petak kosong pada arena untuk menempatkan Guardian.
-4. Gunakan **Jeda/Lanjut** untuk menghentikan atau melanjutkan simulasi.
-5. Lindungi Core Numeria hingga seluruh wave selesai.
+3. Arahkan mouse ke petak kosong untuk melihat highlight hijau, lalu klik untuk menempatkan Guardian.
+4. Petak yang sudah ditempati ditandai merah ketika diarahkan.
+5. Gunakan **Jeda/Lanjut** untuk menghentikan atau melanjutkan simulasi.
+6. Lindungi Core Numeria hingga seluruh wave selesai.
 
 ## Struktur
 
@@ -50,6 +58,6 @@ Folder `.godot/` berisi cache lokal Godot dan dikecualikan oleh `.gitignore`. Ja
 
 Setelah fitur penting berhasil diuji, buat commit di GitHub Desktop dan klik **Push origin** untuk mengirim checkpoint ke GitHub.
 
-## Catatan
+## Catatan pengujian
 
-Ini adalah MVP yang ditingkatkan, bukan rilis final. Uji gameplay di Godot 4.7.2 sebelum melanjutkan ke ekspor Android/iOS. Dokumen desain asli tetap berada di `docs/original/` sebagai referensi.
+Paket ini telah ditinjau secara statis, tetapi tetap perlu dijalankan di Godot 4.7.2 untuk memverifikasi perubahan tampilan dan penyimpanan skor. Jika muncul error, periksa tab Debugger dan simpan teks errornya sebelum melanjutkan.

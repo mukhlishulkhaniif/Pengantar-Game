@@ -10,15 +10,42 @@ var enemies: Array = []
 var projectiles: Array = []
 var placement_enabled: bool = false
 var visual_time: float = 0.0
+var hovered_cell: Vector2i = Vector2i(-1, -1)
+var visual_effects: Array[Dictionary] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size = Vector2(620, 420)
+	mouse_exited.connect(_on_mouse_exited)
 
 func _process(delta: float) -> void:
 	visual_time += delta
-	if not guardians.is_empty() or not enemies.is_empty() or not projectiles.is_empty():
+	for index in range(visual_effects.size() - 1, -1, -1):
+		var effect: Dictionary = visual_effects[index]
+		effect["life"] = float(effect.get("life", 0.0)) - delta
+		if float(effect["life"]) <= 0.0:
+			visual_effects.remove_at(index)
+		else:
+			var position: Vector2 = effect.get("position", Vector2.ZERO)
+			position.y -= 18.0 * delta
+			effect["position"] = position
+			visual_effects[index] = effect
+	if not guardians.is_empty() or not enemies.is_empty() or not projectiles.is_empty() or not visual_effects.is_empty():
 		queue_redraw()
+
+func add_visual_effect(kind: String, position: Vector2, color: Color, text: String = "") -> void:
+	visual_effects.append({
+		"kind": kind,
+		"position": position,
+		"color": color,
+		"text": text,
+		"life": 0.72 if kind == "wave" or kind == "reward" else 0.48,
+		"max_life": 0.72 if kind == "wave" or kind == "reward" else 0.48,
+		"radius": 7.0
+	})
+	if visual_effects.size() > 36:
+		visual_effects.pop_front()
+	queue_redraw()
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#112e29"), true)
@@ -36,6 +63,10 @@ func _draw() -> void:
 			draw_rect(cell_rect, shade, true)
 			if placement_enabled:
 				draw_rect(cell_rect.grow(-3.0), Color(0.65, 0.95, 0.72, 0.045), false, 1.0)
+				if hovered_cell == Vector2i(lane, column):
+					var hover_color: Color = Color(0.95, 0.40, 0.38, 0.20) if _cell_is_occupied(lane, column) else Color(0.55, 1.0, 0.68, 0.24)
+					draw_rect(cell_rect.grow(-5.0), hover_color, true)
+					draw_rect(cell_rect.grow(-5.0), hover_color.lightened(0.35), false, 2.0)
 			# Rumput kecil sebagai detail visual.
 			var grass_x: float = cell_rect.position.x + cell_width * 0.72
 			var grass_y: float = cell_rect.position.y + lane_height * 0.72
@@ -53,8 +84,16 @@ func _draw() -> void:
 	for lane in range(LANE_COUNT):
 		draw_string(ThemeDB.fallback_font, Vector2(5.0, grid.position.y + (lane + 0.5) * lane_height + 4.0), "J%d" % (lane + 1), HORIZONTAL_ALIGNMENT_LEFT, 30.0, 12, Color("#9fbdb2"))
 
-	# Core Numeria di sisi kiri.
+	# Jalur tengah yang lembut membantu membaca arah gerak musuh.
+	for lane in range(LANE_COUNT):
+		var lane_y: float = grid.position.y + (lane + 0.5) * lane_height
+		for dash in range(6):
+			var dash_x: float = grid.position.x + 14.0 + float(dash) * (grid.size.x - 40.0) / 6.0
+			draw_line(Vector2(dash_x, lane_y), Vector2(dash_x + 10.0, lane_y), Color(0.72, 0.91, 0.69, 0.10), 1.0)
+
+	# Core Numeria di sisi kiri dengan cahaya penanda.
 	var core_rect := Rect2(grid.position.x - 25.0, grid.position.y + 12.0, 17.0, grid.size.y - 24.0)
+	draw_rect(core_rect.grow(4.0), Color(0.96, 0.72, 0.28, 0.08), true)
 	draw_rect(core_rect, Color("#b98548"), true)
 	draw_rect(Rect2(core_rect.position.x + 4.0, core_rect.position.y + 12.0, 9.0, core_rect.size.y - 24.0), Color("#f5d57d"), true)
 	draw_string(ThemeDB.fallback_font, Vector2(core_rect.position.x - 3.0, grid.position.y + grid.size.y + 17.0), "CORE", HORIZONTAL_ALIGNMENT_LEFT, 45.0, 11, Color("#f5d57d"))
@@ -65,6 +104,8 @@ func _draw() -> void:
 		_draw_enemy(enemy)
 	for projectile in projectiles:
 		_draw_projectile(projectile)
+	for effect in visual_effects:
+		_draw_visual_effect(effect)
 
 	if placement_enabled:
 		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "PILIH PETAK KOSONG UNTUK MENEMPATKAN GUARDIAN", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#c6f2d2"))
@@ -72,7 +113,9 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(grid.position.x + 8.0, 17.0), "PERTAHANKAN CORE NUMERIA", HORIZONTAL_ALIGNMENT_LEFT, grid.size.x - 16.0, 12, Color("#9fbdb2"))
 
 func _draw_guardian(guardian: Dictionary) -> void:
-	var center: Vector2 = get_guardian_center(guardian)
+	var base_center: Vector2 = get_guardian_center(guardian)
+	var bob_seed: float = float(int(guardian.get("lane", 0)) * 7 + int(guardian.get("column", 0)))
+	var center: Vector2 = base_center + Vector2(0.0, sin(visual_time * 2.4 + bob_seed) * 2.0)
 	var guardian_type: String = str(guardian.get("type", "Plusy"))
 	draw_circle(center + Vector2(0.0, 5.0), 25.0, Color(0.0, 0.0, 0.0, 0.20))
 
@@ -113,7 +156,8 @@ func _draw_guardian(guardian: Dictionary) -> void:
 
 func _draw_enemy(enemy: Dictionary) -> void:
 	var enemy_lane: int = int(enemy.get("lane", 0))
-	var center := Vector2(float(enemy.get("x", size.x - 35.0)), get_lane_center(enemy_lane))
+	var enemy_id: float = float(enemy.get("id", 0))
+	var center := Vector2(float(enemy.get("x", size.x - 35.0)), get_lane_center(enemy_lane) + sin(visual_time * 4.0 + enemy_id) * 2.4)
 	var enemy_type: String = str(enemy.get("type", "Error Blob"))
 	var enemy_color: Color = Color("#e77f83")
 	if enemy_type == "Minus Monster":
@@ -150,9 +194,31 @@ func _draw_enemy(enemy: Dictionary) -> void:
 
 func _draw_projectile(projectile: Dictionary) -> void:
 	var center := Vector2(float(projectile.get("x", 0.0)), float(projectile.get("y", 0.0)))
-	draw_line(center + Vector2(-10.0, 0.0), center, Color(0.45, 0.85, 1.0, 0.45), 4.0)
+	draw_circle(center, 8.0, Color(0.35, 0.78, 1.0, 0.12))
+	draw_line(center + Vector2(-14.0, 0.0), center, Color(0.45, 0.85, 1.0, 0.48), 4.0)
 	draw_circle(center, 5.0, Color("#a8e9ff"))
 	draw_circle(center, 2.2, Color("#ffffff"))
+
+func _draw_visual_effect(effect: Dictionary) -> void:
+	var position: Vector2 = effect.get("position", Vector2.ZERO)
+	var kind: String = str(effect.get("kind", "hit"))
+	var color: Color = effect.get("color", Color.WHITE)
+	var life: float = float(effect.get("life", 0.0))
+	var max_life: float = maxf(float(effect.get("max_life", 0.5)), 0.01)
+	var progress: float = 1.0 - clampf(life / max_life, 0.0, 1.0)
+	color.a = clampf(life / max_life, 0.0, 1.0)
+	if kind == "hit" or kind == "defeat" or kind == "spawn" or kind == "muzzle":
+		var radius: float = 7.0 + progress * 18.0
+		draw_arc(position, radius, 0.0, TAU, 24, color, 2.0, true)
+		for particle_index in range(6):
+			var angle: float = TAU * float(particle_index) / 6.0
+			var direction := Vector2(cos(angle), sin(angle))
+			draw_line(position + direction * (radius * 0.55), position + direction * (radius + 4.0), color, 2.0)
+	var effect_text: String = str(effect.get("text", ""))
+	if not effect_text.is_empty():
+		var font_size: int = 16 if kind == "wave" else 13
+		var width: float = 190.0 if kind == "wave" else 100.0
+		draw_string(ThemeDB.fallback_font, position + Vector2(-width * 0.5, -12.0), effect_text, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
 
 func _spike_points(center: Vector2, radius: float, spikes: int) -> PackedVector2Array:
 	var points := PackedVector2Array()
@@ -176,12 +242,38 @@ func get_lane_center(lane: int) -> float:
 	return grid.position.y + (lane + 0.5) * (grid.size.y / float(LANE_COUNT))
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	if event is InputEventMouseMotion:
+		_update_hover(event.position)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		_update_hover(event.position)
 		_handle_slot_click(event.position)
 		accept_event()
 	elif event is InputEventScreenTouch and event.pressed:
 		_handle_slot_click(event.position)
 		accept_event()
+
+func _update_hover(position: Vector2) -> void:
+	var next_cell := Vector2i(-1, -1)
+	if placement_enabled:
+		var grid: Rect2 = _grid_rect()
+		if grid.has_point(position):
+			var column: int = int(floor((position.x - grid.position.x) / (grid.size.x / float(COLUMN_COUNT))))
+			var lane: int = int(floor((position.y - grid.position.y) / (grid.size.y / float(LANE_COUNT))))
+			if lane >= 0 and lane < LANE_COUNT and column >= 0 and column < COLUMN_COUNT:
+				next_cell = Vector2i(lane, column)
+	if next_cell != hovered_cell:
+		hovered_cell = next_cell
+		queue_redraw()
+
+func _cell_is_occupied(lane: int, column: int) -> bool:
+	for guardian in guardians:
+		if int(guardian.get("lane", -1)) == lane and int(guardian.get("column", -1)) == column:
+			return true
+	return false
+
+func _on_mouse_exited() -> void:
+	hovered_cell = Vector2i(-1, -1)
+	queue_redraw()
 
 func _handle_slot_click(position: Vector2) -> void:
 	var grid: Rect2 = _grid_rect()

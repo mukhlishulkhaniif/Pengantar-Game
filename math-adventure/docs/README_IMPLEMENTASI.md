@@ -1,22 +1,23 @@
-# Catatan Implementasi
+# Catatan Implementasi Math-Adventure 0.4
 
-## Versi 0.2
+## Sasaran
 
-MVP 0.2 memperbarui visual arena, alur soal matematika, wave, serangan proyektil, perilaku musuh, jeda permainan, dan statistik akhir. Semua visual utama dibuat dengan fungsi gambar Godot sehingga tidak membutuhkan aset eksternal.
+Memperjelas aksi di arena tanpa mengganti fondasi gameplay yang sudah diuji pada versi sebelumnya.
 
-### Alur permainan
+## File yang diperbarui
 
-1. Menu utama menyediakan tombol mulai dan panduan.
-2. Battle dimulai pada wave pertama dengan soal mudah.
-3. Jawaban benar memberi energi sesuai tingkat kesulitan; jawaban salah tetap memberi bantuan energi yang lebih kecil dan menunjukkan jawaban yang benar.
-4. Energi digunakan untuk menempatkan Guardian di petak kosong.
-5. Guardian memiliki peran berbeda: Plusy menghasilkan energi, Addy Cannon menembakkan proyektil, Shield Cube menahan musuh.
-6. Wave berikutnya menaikkan kesulitan soal dan variasi musuh.
-7. Hasil akhir menampilkan skor, jumlah musuh dikalahkan, dan akurasi jawaban.
+- `scripts/presentation/arena_view.gd`: animasi idle, efek visual prosedural, jejak proyektil, efek benturan, dan teks mengambang.
+- `scripts/presentation/battle.gd`: memicu efek untuk jawaban matematika, energi, penempatan Guardian, tembakan, kerusakan, wave, dan Core.
+- `scripts/presentation/main_menu.gd`: label versi 0.4.
+- `README.md`, `project.godot`, dan dokumen changelog: dokumentasi versi 0.4.
 
-### Batasan yang masih diketahui
+## Prinsip teknis
 
-- Progress level dan skor belum disimpan lintas sesi.
-- Guardian belum memiliki sistem upgrade atau penjualan.
-- Ekspor Android/iOS dan kontrol perangkat fisik belum disiapkan secara final.
-- Uji akhir tetap perlu dilakukan di Godot 4.7.2 pada komputer pengguna.
+- Tidak menambah ketergantungan aset eksternal.
+- Efek dibatasi hingga 36 elemen aktif untuk mencegah penumpukan yang tidak perlu.
+- Animasi hanya menggunakan `CanvasItem` drawing dan waktu proses.
+- File cache `.godot/` tetap dikecualikan dari Git.
+
+## Pengujian manual
+
+Lihat `CHANGELOG_MVP_0.4.md` untuk daftar pemeriksaan. Jangan anggap versi stabil sebelum diuji pada Godot 4.7.2.
