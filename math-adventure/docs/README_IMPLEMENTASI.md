@@ -21,3 +21,8 @@ Memperjelas aksi di arena tanpa mengganti fondasi gameplay yang sudah diuji pada
 ## Pengujian manual
 
 Lihat `CHANGELOG_MVP_0.4.md` untuk daftar pemeriksaan. Jangan anggap versi stabil sebelum diuji pada Godot 4.7.2.
+
+
+## Revisi HUD v1.1
+
+HUD battle kini menyediakan enam slot Guardian responsif untuk orientasi mobile landscape. Tiga kartu yang telah memiliki mekanik tetap aktif, sementara dua Guardian yang direncanakan di GDD dan satu slot ekspansi ditandai SEGERA hingga implementasi gameplay-nya selesai. Lihat `CHANGELOG_MVP_1.1_HUD_SIX_SLOTS.md`.

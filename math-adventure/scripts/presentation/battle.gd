@@ -107,31 +107,50 @@ func _build_ui() -> void:
 
 	# Seed bank ringkas, dengan energi sebagai tombol untuk membuka tantangan matematika.
 	var header_panel := PanelContainer.new()
-	header_panel.custom_minimum_size = Vector2(0, 86)
+	header_panel.custom_minimum_size = Vector2(0, 84)
 	header_panel.add_theme_stylebox_override("panel", _panel_style(Color("#243a29"), Color("#171a13"), 5, 5))
 	outer.add_child(header_panel)
 
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 5)
+	header.add_theme_constant_override("separation", 4)
 	header.alignment = BoxContainer.ALIGNMENT_CENTER
 	header_panel.add_child(header)
 
-	energy_button = _make_button("✦ %d" % energy, Vector2(108, 72), true)
-	energy_button.add_theme_font_size_override("font_size", 23)
-	energy_button.tooltip_text = "Ketuk untuk tantangan energi matematika"
+	# HUD dirancang untuk enam kartu Guardian pada layar mobile landscape.
+	# Tiga kartu pertama aktif; tiga slot berikutnya menjadi ruang ekspansi tanpa
+	# berpura-pura bahwa Guardian yang belum dibuat sudah bisa dimainkan.
+	var viewport_width: float = maxf(get_viewport_rect().size.x, 800.0)
+	var card_width: float = clampf(viewport_width * 0.058, 70.0, 88.0)
+	var energy_width: float = clampf(viewport_width * 0.075, 84.0, 108.0)
+	var status_width: float = clampf(viewport_width * 0.135, 124.0, 190.0)
+
+	energy_button = _make_button("✦ %d" % energy, Vector2(energy_width, 72), true)
+	energy_button.add_theme_font_size_override("font_size", 21)
+	energy_button.tooltip_text = "Ketuk untuk soal matematika dan energi"
 	energy_button.pressed.connect(_open_question_popup)
 	header.add_child(energy_button)
 
 	var seed_separator := VSeparator.new()
 	header.add_child(seed_separator)
 
-	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube"]
-	var card_titles: Dictionary = {"Plusy": "PLUSY\n50", "Addy Cannon": "ADDY\n100", "Shield Cube": "SHIELD\n75"}
+	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Guardian 6"]
+	var card_titles: Dictionary = {
+		"Plusy": "PLUSY\n50",
+		"Addy Cannon": "ADDY\n100",
+		"Shield Cube": "SHIELD\n75",
+		"Multiply Dragon": "DRAGON\nSEGERA",
+		"Fraction Fairy": "FAIRY\nSEGERA",
+		"Guardian 6": "BARU\nSEGERA"
+	}
 	for guardian_type in guardian_button_types:
-		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(112, 72), false)
+		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(card_width, 72), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		guardian_button.add_theme_font_size_override("font_size", 16)
-		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
+		guardian_button.add_theme_font_size_override("font_size", 12 if card_width < 80.0 else 13)
+		guardian_button.tooltip_text = str(card_titles[guardian_type]).replace("\n", " ")
+		if GUARDIAN_COSTS.has(guardian_type):
+			guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
+		else:
+			guardian_button.disabled = true
 		guardian_buttons.append(guardian_button)
 		header.add_child(guardian_button)
 
@@ -140,16 +159,16 @@ func _build_ui() -> void:
 	header.add_child(spacer)
 
 	var status := VBoxContainer.new()
-	status.custom_minimum_size = Vector2(174, 0)
+	status.custom_minimum_size = Vector2(status_width, 0)
 	status.add_theme_constant_override("separation", 2)
 	header.add_child(status)
 	var status_top := HBoxContainer.new()
 	status_top.add_theme_constant_override("separation", 4)
 	status.add_child(status_top)
-	wave_label = _make_label("WAVE 1/3", 16, Color("#f4e8c9"))
+	wave_label = _make_label("WAVE 1/3", 15, Color("#f4e8c9"))
 	wave_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_top.add_child(wave_label)
-	core_label = _make_label("INTI 120", 15, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
+	core_label = _make_label("INTI 120", 13, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
 	status_top.add_child(core_label)
 	core_bar = ProgressBar.new()
 	core_bar.min_value = 0.0
@@ -161,9 +180,9 @@ func _build_ui() -> void:
 	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#171a13")))
 	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#b95c49")))
 	status.add_child(core_bar)
-	wave_progress_label = _make_label("0/4 MUSUH", 13, Color("#d7c9a8"))
+	wave_progress_label = _make_label("0/4 MUSUH", 11, Color("#d7c9a8"))
 	status.add_child(wave_progress_label)
-	feedback_label = _make_label("SIAP", 12, Color("#e9c777"))
+	feedback_label = _make_label("SERET KE PETAK", 10, Color("#e9c777"))
 	feedback_label.custom_minimum_size = Vector2(0, 16)
 	feedback_label.clip_text = true
 	status.add_child(feedback_label)
@@ -177,11 +196,11 @@ func _build_ui() -> void:
 	energy_bar.max_value = 999.0
 	energy_bar.value = energy
 
-	pause_button = _make_button("Ⅱ", Vector2(54, 72), false)
+	pause_button = _make_button("Ⅱ", Vector2(46, 72), false)
 	pause_button.add_theme_font_size_override("font_size", 19)
 	pause_button.pressed.connect(_toggle_pause)
 	header.add_child(pause_button)
-	var menu_button := _make_button("⌂", Vector2(54, 72), false)
+	var menu_button := _make_button("⌂", Vector2(46, 72), false)
 	menu_button.add_theme_font_size_override("font_size", 20)
 	menu_button.pressed.connect(_return_to_menu)
 	header.add_child(menu_button)
@@ -678,23 +697,32 @@ func _update_guardian_button_styles() -> void:
 	var card_colors: Dictionary = {
 		"Plusy": Color("#536943"),
 		"Addy Cannon": Color("#637e7a"),
-		"Shield Cube": Color("#9c783e")
+		"Shield Cube": Color("#9c783e"),
+		"Multiply Dragon": Color("#765b42"),
+		"Fraction Fairy": Color("#655b7e"),
+		"Guardian 6": Color("#4c5146")
 	}
 	var card_borders: Dictionary = {
 		"Plusy": Color("#d9d0a5"),
 		"Addy Cannon": Color("#d9d0a5"),
-		"Shield Cube": Color("#e8c36f")
+		"Shield Cube": Color("#e8c36f"),
+		"Multiply Dragon": Color("#bba17e"),
+		"Fraction Fairy": Color("#b9a8d6"),
+		"Guardian 6": Color("#77786c")
 	}
 	for index in range(guardian_buttons.size()):
 		var guardian_type: String = guardian_button_types[index]
 		var is_selected: bool = guardian_type == selected_guardian
-		var can_afford: bool = energy >= int(GUARDIAN_COSTS[guardian_type])
+		var is_available: bool = GUARDIAN_COSTS.has(guardian_type)
+		var can_afford: bool = is_available and energy >= int(GUARDIAN_COSTS.get(guardian_type, 99999))
 		guardian_buttons[index].disabled = not can_afford or paused or battle_finished
 		var base_color: Color = card_colors[guardian_type]
+		if not is_available:
+			base_color = base_color.darkened(0.20)
 		var border_color: Color = Color("#e8c36f") if is_selected else card_borders[guardian_type]
-		guardian_buttons[index].add_theme_stylebox_override("normal", _button_style(base_color.lightened(0.12) if is_selected else base_color, border_color, 7, 4))
-		guardian_buttons[index].add_theme_stylebox_override("hover", _button_style(base_color.lightened(0.24), border_color.lightened(0.15), 7, 4))
-		guardian_buttons[index].add_theme_stylebox_override("pressed", _button_style(base_color.darkened(0.12), border_color, 7, 4))
+		guardian_buttons[index].add_theme_stylebox_override("normal", _button_style(base_color.lightened(0.12) if is_selected else base_color, border_color, 6, 2))
+		guardian_buttons[index].add_theme_stylebox_override("hover", _button_style(base_color.lightened(0.24), border_color.lightened(0.15), 6, 2))
+		guardian_buttons[index].add_theme_stylebox_override("pressed", _button_style(base_color.darkened(0.12), border_color, 6, 2))
 		guardian_buttons[index].add_theme_color_override("font_color", Color("#f5edd9") if can_afford else Color("#b3ad98"))
 
 func _toggle_pause() -> void:
