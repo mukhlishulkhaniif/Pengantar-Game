@@ -3,11 +3,11 @@ extends Control
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
-const WAVE_COUNTS: Array[int] = [4, 6, 8]
+const WAVE_COUNTS: Array[int] = [4, 5, 6]
 const GUARDIAN_COSTS: Dictionary = {"Plusy": 50, "Addy Cannon": 100, "Shield Cube": 75}
 
-var energy: int = 100
-var core_hp: int = 100
+var energy: int = 150
+var core_hp: int = 120
 var combo: int = 0
 var score: int = 0
 var defeated_enemies: int = 0
@@ -62,7 +62,7 @@ func _process(delta: float) -> void:
 
 	if spawned_this_wave < spawn_target:
 		spawn_timer += delta
-		var spawn_interval: float = maxf(1.15, 1.75 - float(current_wave - 1) * 0.2)
+		var spawn_interval: float = maxf(2.0, 2.65 - float(current_wave - 1) * 0.25)
 		if spawn_timer >= spawn_interval:
 			spawn_timer = 0.0
 			_spawn_enemy()
@@ -107,7 +107,7 @@ func _build_ui() -> void:
 
 	# Seed bank ringkas, dengan energi sebagai tombol untuk membuka tantangan matematika.
 	var header_panel := PanelContainer.new()
-	header_panel.custom_minimum_size = Vector2(0, 76)
+	header_panel.custom_minimum_size = Vector2(0, 86)
 	header_panel.add_theme_stylebox_override("panel", _panel_style(Color("#243a29"), Color("#171a13"), 5, 5))
 	outer.add_child(header_panel)
 
@@ -116,8 +116,8 @@ func _build_ui() -> void:
 	header.alignment = BoxContainer.ALIGNMENT_CENTER
 	header_panel.add_child(header)
 
-	energy_button = _make_button("✦ %d" % energy, Vector2(98, 62), true)
-	energy_button.add_theme_font_size_override("font_size", 19)
+	energy_button = _make_button("✦ %d" % energy, Vector2(108, 72), true)
+	energy_button.add_theme_font_size_override("font_size", 23)
 	energy_button.tooltip_text = "Ketuk untuk tantangan energi matematika"
 	energy_button.pressed.connect(_open_question_popup)
 	header.add_child(energy_button)
@@ -128,9 +128,9 @@ func _build_ui() -> void:
 	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube"]
 	var card_titles: Dictionary = {"Plusy": "PLUSY\n50", "Addy Cannon": "ADDY\n100", "Shield Cube": "SHIELD\n75"}
 	for guardian_type in guardian_button_types:
-		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(104, 62), false)
+		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(112, 72), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		guardian_button.add_theme_font_size_override("font_size", 13)
+		guardian_button.add_theme_font_size_override("font_size", 16)
 		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
 		guardian_buttons.append(guardian_button)
 		header.add_child(guardian_button)
@@ -140,31 +140,31 @@ func _build_ui() -> void:
 	header.add_child(spacer)
 
 	var status := VBoxContainer.new()
-	status.custom_minimum_size = Vector2(124, 0)
+	status.custom_minimum_size = Vector2(174, 0)
 	status.add_theme_constant_override("separation", 2)
 	header.add_child(status)
 	var status_top := HBoxContainer.new()
 	status_top.add_theme_constant_override("separation", 4)
 	status.add_child(status_top)
-	wave_label = _make_label("WAVE 1/3", 12, Color("#f4e8c9"))
+	wave_label = _make_label("WAVE 1/3", 16, Color("#f4e8c9"))
 	wave_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_top.add_child(wave_label)
-	core_label = _make_label("INTI 100", 11, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
+	core_label = _make_label("INTI 120", 15, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
 	status_top.add_child(core_label)
 	core_bar = ProgressBar.new()
 	core_bar.min_value = 0.0
-	core_bar.max_value = 100.0
+	core_bar.max_value = 120.0
 	core_bar.value = core_hp
 	core_bar.show_percentage = false
-	core_bar.custom_minimum_size = Vector2(0, 8)
+	core_bar.custom_minimum_size = Vector2(0, 10)
 	core_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#171a13")))
 	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#b95c49")))
 	status.add_child(core_bar)
-	wave_progress_label = _make_label("0/4 MUSUH", 9, Color("#d7c9a8"))
+	wave_progress_label = _make_label("0/4 MUSUH", 13, Color("#d7c9a8"))
 	status.add_child(wave_progress_label)
-	feedback_label = _make_label("SIAP", 9, Color("#e9c777"))
-	feedback_label.custom_minimum_size = Vector2(0, 12)
+	feedback_label = _make_label("SIAP", 12, Color("#e9c777"))
+	feedback_label.custom_minimum_size = Vector2(0, 16)
 	feedback_label.clip_text = true
 	status.add_child(feedback_label)
 
@@ -177,11 +177,11 @@ func _build_ui() -> void:
 	energy_bar.max_value = 999.0
 	energy_bar.value = energy
 
-	pause_button = _make_button("Ⅱ", Vector2(48, 62), false)
+	pause_button = _make_button("Ⅱ", Vector2(54, 72), false)
 	pause_button.add_theme_font_size_override("font_size", 19)
 	pause_button.pressed.connect(_toggle_pause)
 	header.add_child(pause_button)
-	var menu_button := _make_button("⌂", Vector2(48, 62), false)
+	var menu_button := _make_button("⌂", Vector2(54, 72), false)
 	menu_button.add_theme_font_size_override("font_size", 20)
 	menu_button.pressed.connect(_return_to_menu)
 	header.add_child(menu_button)
@@ -317,11 +317,10 @@ func _end_drag(position: Vector2) -> void:
 
 
 func _difficulty_for_wave() -> String:
-	if current_wave <= 1:
+	# Untuk anak SD, dua wave pertama memakai soal mudah; wave terakhir sedang.
+	if current_wave <= 2:
 		return "mudah"
-	if current_wave == 2:
-		return "sedang"
-	return "sulit"
+	return "sedang"
 
 func _open_question_popup() -> void:
 	if battle_finished or paused or question_popup_open:
@@ -438,11 +437,17 @@ func _place_guardian_at(lane: int, column: int) -> void:
 		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 		return
 	energy -= cost
+	var guardian_max_hp: int = 180
+	if guardian_type == "Addy Cannon":
+		guardian_max_hp = 170
+	elif guardian_type == "Shield Cube":
+		guardian_max_hp = 420
 	guardians.append({
 		"type": guardian_type,
 		"lane": lane,
 		"column": column,
-		"hp": 300 if guardian_type == "Shield Cube" else 100,
+		"hp": guardian_max_hp,
+		"max_hp": guardian_max_hp,
 		"cooldown": 0.0,
 		"energy_timer": 0.0
 	})
@@ -479,19 +484,19 @@ func _spawn_enemy() -> void:
 		elif spawned_this_wave % 3 == 2:
 			enemy_type = "Minus Monster"
 
-	var hp: int = 50
-	var speed: float = 36.0
-	var core_damage: int = 20
+	var hp: int = 55
+	var speed: float = 22.0
+	var core_damage: int = 12
 	if enemy_type == "Minus Monster":
-		hp = 100
-		speed = 28.0
-		core_damage = 20
+		hp = 90
+		speed = 18.0
+		core_damage = 12
 	elif enemy_type == "Calculator Bug":
-		hp = 70
-		speed = 57.0
-		core_damage = 15
+		hp = 65
+		speed = 31.0
+		core_damage = 10
 
-	var lane: int = randi_range(0, 2)
+	var lane: int = randi_range(0, 4)
 	enemies.append({
 		"id": next_enemy_id,
 		"type": enemy_type,
@@ -545,7 +550,7 @@ func _find_target_index(guardian: Dictionary) -> int:
 		if int(enemy["lane"]) != int(guardian["lane"]):
 			continue
 		var distance: float = float(enemy["x"]) - guardian_center.x
-		if distance > 0.0 and distance <= 360.0 and distance < best_distance:
+		if distance > 0.0 and distance <= arena.get_attack_range() and distance < best_distance:
 			best_distance = distance
 			best_index = index
 	return best_index
@@ -586,35 +591,39 @@ func _update_enemies(delta: float) -> void:
 			score += 20
 			continue
 
-		var shield_index: int = _find_blocking_shield(enemy)
-		if shield_index >= 0:
+		var blocking_index: int = _find_blocking_guardian(enemy)
+		if blocking_index >= 0:
+			var guardian: Dictionary = guardians[blocking_index]
+			var guardian_x: float = arena.get_guardian_center(guardian).x
+			# Monster berhenti di depan Guardian dan menyerangnya sampai HP habis.
+			enemy["x"] = guardian_x + 34.0
 			enemy["attack_timer"] = float(enemy.get("attack_timer", 0.0)) + delta
-			if float(enemy["attack_timer"]) >= 1.0:
-				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.0
-				var shield: Dictionary = guardians[shield_index]
-				shield["hp"] = int(shield.get("hp", 300)) - 15
+			if float(enemy["attack_timer"]) >= 1.25:
+				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.25
+				guardian["hp"] = int(guardian.get("hp", 180)) - 12
 				if is_instance_valid(arena):
-					arena.add_visual_effect("hit", arena.get_guardian_center(shield), Color("#f2b4a8"), "-15")
-				if int(shield["hp"]) <= 0:
+					arena.add_visual_effect("hit", arena.get_guardian_center(guardian), Color("#f2b4a8"), "-12")
+				if int(guardian["hp"]) <= 0:
 					if is_instance_valid(arena):
-						arena.add_visual_effect("defeat", arena.get_guardian_center(shield), Color("#f2b4a8"), "HANCUR")
-					guardians.remove_at(shield_index)
-					feedback_label.text = "Shield hancur"
+						arena.add_visual_effect("defeat", arena.get_guardian_center(guardian), Color("#f2b4a8"), "HANCUR")
+					guardians.remove_at(blocking_index)
+					feedback_label.text = "Guardian hancur"
 				else:
-					guardians[shield_index] = shield
+					guardians[blocking_index] = guardian
 			enemies[index] = enemy
 		else:
+			enemy["attack_timer"] = 0.0
 			enemy["x"] = float(enemy["x"]) - float(enemy["speed"]) * delta
 			if float(enemy["x"]) <= 18.0:
-				var core_damage_amount: int = int(enemy.get("core_damage", 20))
+				var core_damage_amount: int = int(enemy.get("core_damage", 12))
 				core_hp -= core_damage_amount
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", Vector2(26.0, arena.get_lane_center(int(enemy["lane"]))), Color("#f2b4a8"), "CORE -%d" % core_damage_amount)
 				if str(enemy["type"]) == "Minus Monster":
-					energy = maxi(0, energy - 15)
-					feedback_label.text = "Core -20 • Energi -15"
+					energy = maxi(0, energy - 10)
+					feedback_label.text = "Inti -%d • Energi -10" % core_damage_amount
 				else:
-					feedback_label.text = "Core terkena serangan"
+					feedback_label.text = "Inti terkena serangan"
 				feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 				enemies.remove_at(index)
 				if core_hp <= 0:
@@ -624,15 +633,23 @@ func _update_enemies(delta: float) -> void:
 			else:
 				enemies[index] = enemy
 
-func _find_blocking_shield(enemy: Dictionary) -> int:
+func _find_blocking_guardian(enemy: Dictionary) -> int:
+	# Semua Guardian menghalangi monster pada jalurnya. Shield memiliki HP tertinggi.
+	var enemy_x: float = float(enemy.get("x", 0.0))
+	var enemy_lane: int = int(enemy.get("lane", -1))
+	var best_index: int = -1
+	var nearest_distance: float = INF
 	for index in range(guardians.size()):
 		var guardian: Dictionary = guardians[index]
-		if str(guardian["type"]) != "Shield Cube" or int(guardian["lane"]) != int(enemy["lane"]):
+		if int(guardian.get("lane", -2)) != enemy_lane:
 			continue
 		var guardian_x: float = arena.get_guardian_center(guardian).x
-		if float(enemy["x"]) <= guardian_x + 24.0 and float(enemy["x"]) >= guardian_x - 24.0:
-			return index
-	return -1
+		var distance: float = enemy_x - guardian_x
+		# Monster bergerak dari kanan ke kiri; tangkap saat menyentuh Guardian.
+		if distance >= -32.0 and distance <= 42.0 and absf(distance) < nearest_distance:
+			nearest_distance = absf(distance)
+			best_index = index
+	return best_index
 
 func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):

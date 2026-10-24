@@ -4,8 +4,8 @@ extends Control
 
 signal slot_clicked(lane: int, column: int)
 
-const LANE_COUNT: int = 3
-const COLUMN_COUNT: int = 6
+const LANE_COUNT: int = 5
+const COLUMN_COUNT: int = 9
 const GRID_TOP_MARGIN: float = 8.0
 const GRID_BOTTOM_MARGIN: float = 8.0
 const BACKGROUND_TEXTURE_PATH: String = "res://assets/backgrounds/addition_forest_bg.png"
@@ -278,10 +278,14 @@ func _draw_guardian(guardian: Dictionary) -> void:
 	else:
 		_draw_guardian_icon(guardian_type, center, 1.0)
 
-	if guardian_type == "Shield Cube":
-		var hp_ratio: float = clampf(float(guardian.get("hp", 300)) / 300.0, 0.0, 1.0)
-		draw_rect(Rect2(center.x - 23.0, center.y + 29.0, 46.0, 4.0), Color("#193329"), true)
-		draw_rect(Rect2(center.x - 23.0, center.y + 29.0, 46.0 * hp_ratio, 4.0), Color("#b4f28f"), true)
+	# Semua Guardian memiliki HP dan bar kesehatan yang selalu terlihat.
+	var max_hp: float = maxf(float(guardian.get("max_hp", 160)), 1.0)
+	var hp_ratio: float = clampf(float(guardian.get("hp", max_hp)) / max_hp, 0.0, 1.0)
+	var bar_width: float = 48.0
+	var bar_position := Vector2(center.x - bar_width * 0.5, center.y + 34.0)
+	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#171a13"), true)
+	draw_rect(Rect2(bar_position, Vector2(bar_width * hp_ratio, 6.0)), Color("#a6e6b8") if hp_ratio > 0.35 else Color("#b95c49"), true)
+	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#eee2c4"), false, 1.0, true)
 
 func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: float) -> void:
 	if guardian_type == "Plusy":
@@ -517,6 +521,11 @@ func get_guardian_center(guardian: Dictionary) -> Vector2:
 func get_lane_center(lane: int) -> float:
 	var grid: Rect2 = _grid_rect()
 	return grid.position.y + (float(lane) + 0.5) * (grid.size.y / float(LANE_COUNT))
+
+func get_attack_range() -> float:
+	# Jangkauan sekitar lima petak agar Guardian penyerang dapat menghadapi kelompok musuh.
+	var grid: Rect2 = _grid_rect()
+	return (grid.size.x / float(COLUMN_COUNT)) * 5.0
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
