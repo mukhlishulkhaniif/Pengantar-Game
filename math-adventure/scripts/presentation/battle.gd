@@ -45,6 +45,10 @@ var reward_hint_label: Label
 var feedback_label: Label
 var pause_button: Button
 var answer_buttons: Array[Button] = []
+var wave_segments: Array[PanelContainer] = []
+var wave_banner: Control
+var wave_banner_timer: float = 0.0
+var last_wave_segment_state: int = -1
 var question_popup: Control
 var question_popup_open: bool = false
 var guardian_buttons: Array[Button] = []
@@ -57,6 +61,7 @@ func _ready() -> void:
 	_refresh_hud()
 
 func _process(delta: float) -> void:
+	_update_wave_banner(delta)
 	if battle_finished or paused:
 		return
 
@@ -116,13 +121,10 @@ func _build_ui() -> void:
 	header.alignment = BoxContainer.ALIGNMENT_CENTER
 	header_panel.add_child(header)
 
-	# HUD dirancang untuk enam kartu Guardian pada layar mobile landscape.
-	# Tiga kartu pertama aktif; tiga slot berikutnya menjadi ruang ekspansi tanpa
-	# berpura-pura bahwa Guardian yang belum dibuat sudah bisa dimainkan.
+	# HUD landscape: energi, enam kartu, tracker wave visual, dan tombol aksi.
 	var viewport_width: float = maxf(get_viewport_rect().size.x, 800.0)
-	var card_width: float = clampf(viewport_width * 0.058, 70.0, 88.0)
-	var energy_width: float = clampf(viewport_width * 0.075, 84.0, 108.0)
-	var status_width: float = clampf(viewport_width * 0.135, 124.0, 190.0)
+	var card_width: float = clampf(viewport_width * 0.066, 78.0, 98.0)
+	var energy_width: float = clampf(viewport_width * 0.082, 96.0, 116.0)
 
 	energy_button = _make_button("✦ %d" % energy, Vector2(energy_width, 72), true)
 	energy_button.add_theme_font_size_override("font_size", 21)
@@ -131,6 +133,7 @@ func _build_ui() -> void:
 	header.add_child(energy_button)
 
 	var seed_separator := VSeparator.new()
+	seed_separator.add_theme_color_override("color", Color("#bba87a"))
 	header.add_child(seed_separator)
 
 	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Guardian 6"]
@@ -138,14 +141,14 @@ func _build_ui() -> void:
 		"Plusy": "PLUSY\n50",
 		"Addy Cannon": "ADDY\n100",
 		"Shield Cube": "SHIELD\n75",
-		"Multiply Dragon": "DRAGON\nSEGERA",
-		"Fraction Fairy": "FAIRY\nSEGERA",
-		"Guardian 6": "BARU\nSEGERA"
+		"Multiply Dragon": "DRAGON\n—",
+		"Fraction Fairy": "FAIRY\n—",
+		"Guardian 6": "GUARDIAN\n—"
 	}
 	for guardian_type in guardian_button_types:
 		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(card_width, 72), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		guardian_button.add_theme_font_size_override("font_size", 12 if card_width < 80.0 else 13)
+		guardian_button.add_theme_font_size_override("font_size", 12 if card_width < 90.0 else 13)
 		guardian_button.tooltip_text = str(card_titles[guardian_type]).replace("\n", " ")
 		if GUARDIAN_COSTS.has(guardian_type):
 			guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
@@ -154,37 +157,53 @@ func _build_ui() -> void:
 		guardian_buttons.append(guardian_button)
 		header.add_child(guardian_button)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(spacer)
-
+	# Tracker wave mengisi ruang tengah secara sengaja, bukan menyisakan celah kosong.
+	var status_panel := PanelContainer.new()
+	status_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status_panel.custom_minimum_size = Vector2(185, 0)
+	status_panel.add_theme_stylebox_override("panel", _panel_style(Color("#1c3022"), Color("#63734a"), 7, 7))
+	header.add_child(status_panel)
 	var status := VBoxContainer.new()
-	status.custom_minimum_size = Vector2(status_width, 0)
-	status.add_theme_constant_override("separation", 2)
-	header.add_child(status)
+	status.add_theme_constant_override("separation", 4)
+	status_panel.add_child(status)
 	var status_top := HBoxContainer.new()
-	status_top.add_theme_constant_override("separation", 4)
+	status_top.add_theme_constant_override("separation", 6)
 	status.add_child(status_top)
-	wave_label = _make_label("WAVE 1/3", 15, Color("#f4e8c9"))
+	wave_label = _make_label("WAVE 1", 14, Color("#f4e8c9"))
 	wave_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status_top.add_child(wave_label)
-	core_label = _make_label("INTI 120", 13, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
+	wave_progress_label = _make_label("0/4", 11, Color("#d7c9a8"), HORIZONTAL_ALIGNMENT_CENTER)
+	status_top.add_child(wave_progress_label)
+	core_label = _make_label("♥ 120", 13, Color("#f2c2a8"), HORIZONTAL_ALIGNMENT_RIGHT)
 	status_top.add_child(core_label)
+
+	var wave_track := HBoxContainer.new()
+	wave_track.add_theme_constant_override("separation", 4)
+	wave_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status.add_child(wave_track)
+	wave_segments.clear()
+	for i in range(3):
+		var segment := PanelContainer.new()
+		segment.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		segment.custom_minimum_size = Vector2(0, 7)
+		segment.add_theme_stylebox_override("panel", _panel_style(Color("#53634a"), Color("#53634a"), 3, 0))
+		wave_segments.append(segment)
+		wave_track.add_child(segment)
+
 	core_bar = ProgressBar.new()
 	core_bar.min_value = 0.0
 	core_bar.max_value = 120.0
 	core_bar.value = core_hp
 	core_bar.show_percentage = false
-	core_bar.custom_minimum_size = Vector2(0, 10)
+	core_bar.custom_minimum_size = Vector2(0, 9)
 	core_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	core_bar.add_theme_stylebox_override("background", _meter_style(Color("#171a13")))
 	core_bar.add_theme_stylebox_override("fill", _meter_style(Color("#b95c49")))
 	status.add_child(core_bar)
-	wave_progress_label = _make_label("0/4 MUSUH", 11, Color("#d7c9a8"))
-	status.add_child(wave_progress_label)
-	feedback_label = _make_label("SERET KE PETAK", 10, Color("#e9c777"))
-	feedback_label.custom_minimum_size = Vector2(0, 16)
-	feedback_label.clip_text = true
+
+	# Feedback teks tetap tersedia untuk logika, tetapi tidak memenuhi HUD.
+	feedback_label = _make_label("", 10, Color("#e9c777"))
+	feedback_label.visible = false
 	status.add_child(feedback_label)
 
 	# Statistik rinci disimpan untuk rekap akhir, bukan memenuhi HUD saat bermain.
@@ -196,12 +215,20 @@ func _build_ui() -> void:
 	energy_bar.max_value = 999.0
 	energy_bar.value = energy
 
-	pause_button = _make_button("Ⅱ", Vector2(46, 72), false)
-	pause_button.add_theme_font_size_override("font_size", 19)
+	pause_button = _make_button("Ⅱ", Vector2(52, 72), false)
+	pause_button.add_theme_font_size_override("font_size", 21)
+	pause_button.tooltip_text = "Jeda permainan"
+	pause_button.add_theme_stylebox_override("normal", _button_style(Color("#31482f"), Color("#bba87a"), 10, 4))
+	pause_button.add_theme_stylebox_override("hover", _button_style(Color("#4a633d"), Color("#e8c36f"), 10, 4))
+	pause_button.add_theme_stylebox_override("pressed", _button_style(Color("#223521"), Color("#e8c36f"), 10, 4))
 	pause_button.pressed.connect(_toggle_pause)
 	header.add_child(pause_button)
-	var menu_button := _make_button("⌂", Vector2(46, 72), false)
-	menu_button.add_theme_font_size_override("font_size", 20)
+	var menu_button := _make_button("⌂", Vector2(52, 72), false)
+	menu_button.add_theme_font_size_override("font_size", 22)
+	menu_button.tooltip_text = "Kembali ke menu"
+	menu_button.add_theme_stylebox_override("normal", _button_style(Color("#31482f"), Color("#bba87a"), 10, 4))
+	menu_button.add_theme_stylebox_override("hover", _button_style(Color("#4a633d"), Color("#e8c36f"), 10, 4))
+	menu_button.add_theme_stylebox_override("pressed", _button_style(Color("#223521"), Color("#e8c36f"), 10, 4))
 	menu_button.pressed.connect(_return_to_menu)
 	header.add_child(menu_button)
 
@@ -271,6 +298,35 @@ func _build_ui() -> void:
 	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	close_button.pressed.connect(_close_question_popup)
 	popup_content.add_child(close_button)
+
+	# Banner pergantian wave tampil di tengah arena, singkat dan tidak bisa menangkap sentuhan.
+	wave_banner = Control.new()
+	wave_banner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	wave_banner.visible = false
+	wave_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(wave_banner)
+	var banner_shade := ColorRect.new()
+	banner_shade.color = Color(0.05, 0.07, 0.04, 0.38)
+	banner_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	banner_shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wave_banner.add_child(banner_shade)
+	var banner_center := CenterContainer.new()
+	banner_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	banner_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wave_banner.add_child(banner_center)
+	var banner_panel := PanelContainer.new()
+	banner_panel.custom_minimum_size = Vector2(270, 94)
+	banner_panel.add_theme_stylebox_override("panel", _panel_style(Color("#243a29"), Color("#e8c36f"), 10, 14))
+	banner_center.add_child(banner_panel)
+	var banner_content := VBoxContainer.new()
+	banner_content.add_theme_constant_override("separation", 3)
+	banner_panel.add_child(banner_content)
+	var banner_title := _make_label("WAVE 1", 25, Color("#f4e8c9"), HORIZONTAL_ALIGNMENT_CENTER)
+	banner_title.name = "BannerTitle"
+	banner_content.add_child(banner_title)
+	var banner_subtitle := _make_label("SIAPKAN GUARDIAN", 11, Color("#d7c9a8"), HORIZONTAL_ALIGNMENT_CENTER)
+	banner_subtitle.name = "BannerSubtitle"
+	banner_content.add_child(banner_subtitle)
 
 func _input(event: InputEvent) -> void:
 	# Input mouse untuk editor PC dan input sentuh untuk target Android.
@@ -488,10 +544,31 @@ func _start_next_wave() -> void:
 	spawn_timer = 0.0
 	intermission_timer = 0.0
 	_new_question()
-	feedback_label.text = "Wave %d dimulai" % current_wave
-	feedback_label.add_theme_color_override("font_color", Color("#fff4d6"))
-	if is_instance_valid(arena):
-		arena.add_visual_effect("wave", Vector2(maxf(arena.size.x * 0.5, 320.0), 46.0), Color("#f5d57d"), "WAVE %d DIMULAI" % current_wave)
+	feedback_label.text = ""
+	_show_wave_banner(current_wave)
+
+func _show_wave_banner(wave_number: int) -> void:
+	if not is_instance_valid(wave_banner):
+		return
+	var title: Label = wave_banner.find_child("BannerTitle", true, false) as Label
+	var subtitle: Label = wave_banner.find_child("BannerSubtitle", true, false) as Label
+	if is_instance_valid(title):
+		title.text = "WAVE %d" % wave_number
+	if is_instance_valid(subtitle):
+		subtitle.text = "MULAI BERTAHAN" if wave_number == 1 else "WAVE BERIKUTNYA"
+	wave_banner.modulate.a = 1.0
+	wave_banner.visible = true
+	wave_banner_timer = 1.45
+
+func _update_wave_banner(delta: float) -> void:
+	if not is_instance_valid(wave_banner) or not wave_banner.visible:
+		return
+	wave_banner_timer -= delta
+	if wave_banner_timer <= 0.0:
+		wave_banner.visible = false
+		wave_banner.modulate.a = 1.0
+	elif wave_banner_timer < 0.28:
+		wave_banner.modulate.a = clampf(wave_banner_timer / 0.28, 0.0, 1.0)
 
 func _spawn_enemy() -> void:
 	var enemy_type: String = "Error Blob"
@@ -674,9 +751,9 @@ func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):
 		energy_button.text = "✦ %d" % energy
 	if is_instance_valid(core_label):
-		core_label.text = "INTI %d" % core_hp
+		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):
-		wave_label.text = "WAVE %d/3" % max(current_wave, 1)
+		wave_label.text = "WAVE %d" % max(current_wave, 1)
 	if is_instance_valid(score_label):
 		score_label.text = "SKOR %d" % score
 	if is_instance_valid(core_bar):
@@ -684,14 +761,25 @@ func _refresh_hud() -> void:
 	if is_instance_valid(energy_bar):
 		energy_bar.value = energy
 	if is_instance_valid(wave_progress_label):
-		wave_progress_label.text = "%d/%d MUSUH" % [spawned_this_wave, spawn_target]
+		wave_progress_label.text = "%d/%d" % [spawned_this_wave, spawn_target]
 	if is_instance_valid(arena):
 		arena.guardians = guardians
 		arena.enemies = enemies
 		arena.projectiles = projectiles
 		arena.placement_enabled = not selected_guardian.is_empty() and not paused and not battle_finished
 		arena.queue_redraw()
+	_update_wave_segments()
 	_update_guardian_button_styles()
+
+func _update_wave_segments() -> void:
+	if last_wave_segment_state == current_wave:
+		return
+	last_wave_segment_state = current_wave
+	for index in range(wave_segments.size()):
+		var active: bool = index < current_wave
+		var fill: Color = Color("#d9b75f") if active else Color("#53634a")
+		var border: Color = Color("#f1d990") if active else Color("#53634a")
+		wave_segments[index].add_theme_stylebox_override("panel", _panel_style(fill, border, 3, 0))
 
 func _update_guardian_button_styles() -> void:
 	var card_colors: Dictionary = {
@@ -729,7 +817,8 @@ func _toggle_pause() -> void:
 	if battle_finished or question_popup_open:
 		return
 	paused = not paused
-	pause_button.text = ">" if paused else "||"
+	pause_button.text = "▶" if paused else "Ⅱ"
+	pause_button.tooltip_text = "Lanjutkan permainan" if paused else "Jeda permainan"
 	feedback_label.text = "Dijeda" if paused else "Lanjut bermain"
 	feedback_label.add_theme_color_override("font_color", Color("#fff4d6"))
 	for button in answer_buttons:
