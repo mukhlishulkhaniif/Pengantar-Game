@@ -12,7 +12,10 @@ const BACKGROUND_TEXTURE_PATH: String = "res://assets/backgrounds/addition_fores
 const GUARDIAN_TEXTURE_PATHS: Dictionary = {
 	"Plusy": "res://assets/characters/plusy.png",
 	"Addy Cannon": "res://assets/characters/addy_cannon.png",
-	"Shield Cube": "res://assets/characters/shield_cube.png"
+	"Shield Cube": "res://assets/characters/shield_cube.png",
+	"Multiply Dragon": "res://assets/characters/multiply_dragon.png",
+	"Fraction Fairy": "res://assets/characters/fraction_fairy.png",
+	"Number Knight": "res://assets/characters/number_knight.png"
 }
 const ENEMY_TEXTURE_PATHS: Dictionary = {
 	"Error Blob": "res://assets/characters/error_blob.png",
@@ -308,7 +311,6 @@ func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: fl
 		_draw_leaf(center + Vector2(-3.0, 20.0 * scale_value), 2.8, 24.0 * scale_value, 9.0 * scale_value, Color("#419d4a"))
 		_draw_leaf(center + Vector2(3.0, 22.0 * scale_value), 0.30, 23.0 * scale_value, 8.0 * scale_value, Color("#5fbe55"))
 		var head := center + Vector2(-1.0 * scale_value, -7.0 * scale_value)
-		# Laras meriam digambar lebih dahulu supaya menyatu dengan kepala.
 		draw_line(head + Vector2(9.0 * scale_value, 0.0), head + Vector2(37.0 * scale_value, 0.0), Color("#235c76"), 17.0 * scale_value, true)
 		draw_line(head + Vector2(10.0 * scale_value, -1.0 * scale_value), head + Vector2(36.0 * scale_value, -1.0 * scale_value), Color("#72c9ed"), 10.0 * scale_value, true)
 		draw_circle(head + Vector2(37.0 * scale_value, 0.0), 8.0 * scale_value, Color("#c7f3ff"))
@@ -318,7 +320,7 @@ func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: fl
 		_draw_eyes(head + Vector2(-3.0 * scale_value, -4.0 * scale_value), 10.0 * scale_value, 4.0 * scale_value)
 		draw_arc(head + Vector2(-1.0 * scale_value, 3.0 * scale_value), 5.0 * scale_value, 0.15, PI - 0.15, 12, Color("#1f5874"), 1.7 * scale_value, true)
 		draw_circle(head + Vector2(-9.0 * scale_value, -13.0 * scale_value), 4.0 * scale_value, Color("#bdeeff"))
-	else:
+	elif guardian_type == "Shield Cube":
 		var top_face := PackedVector2Array([
 			center + Vector2(0.0, -27.0 * scale_value), center + Vector2(23.0 * scale_value, -15.0 * scale_value),
 			center + Vector2(0.0, -3.0 * scale_value), center + Vector2(-23.0 * scale_value, -15.0 * scale_value)
@@ -338,6 +340,46 @@ func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: fl
 		_draw_eyes(center + Vector2(-11.0 * scale_value, -1.0 * scale_value), 7.0 * scale_value, 3.3 * scale_value)
 		draw_line(center + Vector2(-15.0 * scale_value, 8.0 * scale_value), center + Vector2(-6.0 * scale_value, 8.0 * scale_value), Color("#76502b"), 2.0 * scale_value, true)
 		draw_line(center + Vector2(7.0 * scale_value, 7.0 * scale_value), center + Vector2(16.0 * scale_value, 2.0 * scale_value), Color("#fff0c5"), 3.0 * scale_value, true)
+	elif guardian_type == "Multiply Dragon":
+		# Naga kecil bergaya kartun tinta: tanduk, sayap, sisik, dan semburan api.
+		var left_wing := PackedVector2Array([center + Vector2(-7.0, -8.0) * scale_value, center + Vector2(-28.0, -27.0) * scale_value, center + Vector2(-25.0, -2.0) * scale_value, center + Vector2(-10.0, 10.0) * scale_value])
+		var right_wing := PackedVector2Array([center + Vector2(4.0, -9.0) * scale_value, center + Vector2(25.0, -28.0) * scale_value, center + Vector2(24.0, -1.0) * scale_value, center + Vector2(9.0, 10.0) * scale_value])
+		draw_colored_polygon(left_wing, Color("#8f4838"))
+		draw_colored_polygon(right_wing, Color("#a9573c"))
+		draw_polyline(PackedVector2Array([left_wing[0], left_wing[1], left_wing[2], left_wing[3]]), Color("#f0b36c"), 2.0 * scale_value, true)
+		draw_polyline(PackedVector2Array([right_wing[0], right_wing[1], right_wing[2], right_wing[3]]), Color("#f0b36c"), 2.0 * scale_value, true)
+		draw_circle(center + Vector2(0.0, 2.0) * scale_value, 20.0 * scale_value, Color("#bd7048"))
+		draw_arc(center + Vector2(0.0, 2.0) * scale_value, 20.0 * scale_value, 0.0, TAU, 28, Color("#f7d29a"), 2.0 * scale_value, true)
+		draw_colored_polygon(PackedVector2Array([center + Vector2(-12.0, -12.0) * scale_value, center + Vector2(-8.0, -27.0) * scale_value, center + Vector2(-1.0, -13.0) * scale_value]), Color("#f1d990"))
+		draw_colored_polygon(PackedVector2Array([center + Vector2(4.0, -13.0) * scale_value, center + Vector2(13.0, -26.0) * scale_value, center + Vector2(13.0, -8.0) * scale_value]), Color("#f1d990"))
+		_draw_ellipse(center + Vector2(10.5, 4.5) * scale_value, 12.5 * scale_value, 8.5 * scale_value, Color("#e4a365"))
+		_draw_eyes(center + Vector2(-2.0, -3.0) * scale_value, 9.0 * scale_value, 4.0 * scale_value)
+		draw_arc(center + Vector2(9.0, 7.0) * scale_value, 6.0 * scale_value, 0.0, PI, 12, Color("#6e3028"), 2.0 * scale_value, true)
+		draw_colored_polygon(PackedVector2Array([center + Vector2(16.0, 3.0) * scale_value, center + Vector2(28.0, 7.0) * scale_value, center + Vector2(17.0, 12.0) * scale_value]), Color("#f2c14e"))
+	elif guardian_type == "Fraction Fairy":
+		# Peri penyembuh dengan sayap berbentuk daun dan tongkat bintang.
+		_draw_ellipse(center + Vector2(-17.0, -8.0) * scale_value, 12.0 * scale_value, 18.0 * scale_value, Color("#c5d8e9", 0.9), -0.45)
+		_draw_ellipse(center + Vector2(17.0, -8.0) * scale_value, 12.0 * scale_value, 18.0 * scale_value, Color("#c5d8e9", 0.9), 0.45)
+		draw_line(center + Vector2(16.0, 0.0) * scale_value, center + Vector2(30.0, -22.0) * scale_value, Color("#8a6a9f"), 3.0 * scale_value, true)
+		draw_colored_polygon(_star_points(center + Vector2(31.0, -24.0) * scale_value, 4.0 * scale_value, 8.0 * scale_value), Color("#f4d778"))
+		draw_circle(center + Vector2(0.0, 1.0) * scale_value, 17.0 * scale_value, Color("#d8b6df"))
+		draw_arc(center + Vector2(0.0, 1.0) * scale_value, 17.0 * scale_value, 0.0, TAU, 24, Color("#fff0c5"), 2.0 * scale_value, true)
+		draw_arc(center + Vector2(0.0, -9.0) * scale_value, 14.0 * scale_value, PI, TAU, 18, Color("#6d4d83"), 5.0 * scale_value, true)
+		_draw_eyes(center + Vector2(0.0, 0.0) * scale_value, 8.0 * scale_value, 3.7 * scale_value)
+		draw_arc(center + Vector2(0.0, 6.0) * scale_value, 4.0 * scale_value, 0.1, PI - 0.1, 10, Color("#704a67"), 1.6 * scale_value, true)
+		draw_colored_polygon(PackedVector2Array([center + Vector2(-10.0, 16.0) * scale_value, center + Vector2(0.0, 29.0) * scale_value, center + Vector2(10.0, 16.0) * scale_value]), Color("#8f6ba7"))
+	elif guardian_type == "Number Knight":
+		# Kesatria angka: helm, pelindung dada, pedang, dan perisai kecil.
+		var shield := PackedVector2Array([center + Vector2(-25.0, -6.0) * scale_value, center + Vector2(-12.0, -13.0) * scale_value, center + Vector2(-9.0, 10.0) * scale_value, center + Vector2(-18.0, 20.0) * scale_value, center + Vector2(-27.0, 10.0) * scale_value])
+		draw_colored_polygon(shield, Color("#5e8790"))
+		draw_polyline(PackedVector2Array([shield[0], shield[1], shield[2], shield[3], shield[4], shield[0]]), Color("#d5e4d9"), 2.0 * scale_value, true)
+		draw_line(center + Vector2(16.0, 9.0) * scale_value, center + Vector2(29.0, -21.0) * scale_value, Color("#b9d0db"), 5.0 * scale_value, true)
+		draw_line(center + Vector2(12.0, 8.0) * scale_value, center + Vector2(21.0, 12.0) * scale_value, Color("#8b583b"), 5.0 * scale_value, true)
+		draw_colored_polygon(PackedVector2Array([center + Vector2(-13.0, -11.0) * scale_value, center + Vector2(13.0, -11.0) * scale_value, center + Vector2(16.0, 14.0) * scale_value, center + Vector2(0.0, 24.0) * scale_value, center + Vector2(-16.0, 14.0) * scale_value]), Color("#647f8a"))
+		draw_colored_polygon(PackedVector2Array([center + Vector2(-17.0, -12.0) * scale_value, center + Vector2(-10.0, -25.0) * scale_value, center + Vector2(0.0, -30.0) * scale_value, center + Vector2(10.0, -25.0) * scale_value, center + Vector2(17.0, -12.0) * scale_value, center + Vector2(0.0, -3.0) * scale_value]), Color("#d6d7b5"))
+		draw_line(center + Vector2(-10.0, -14.0) * scale_value, center + Vector2(10.0, -14.0) * scale_value, Color("#7c6045"), 2.0 * scale_value, true)
+		_draw_eyes(center + Vector2(0.0, -10.0) * scale_value, 7.0 * scale_value, 3.0 * scale_value)
+		draw_line(center + Vector2(-7.0, 6.0) * scale_value, center + Vector2(7.0, 6.0) * scale_value, Color("#e7d6a5"), 2.0 * scale_value, true)
 
 func _draw_enemy(enemy: Dictionary) -> void:
 	var enemy_lane: int = int(enemy.get("lane", 0))
@@ -416,11 +458,18 @@ func _draw_enemy_health_bar(center: Vector2, enemy: Dictionary) -> void:
 func _draw_projectile(projectile: Dictionary) -> void:
 	var center := Vector2(float(projectile.get("x", 0.0)), float(projectile.get("y", 0.0)))
 	var pulse: float = 1.0 + sin(visual_time * 18.0 + center.x * 0.04) * 0.12
-	draw_line(center + Vector2(-20.0, 1.5), center + Vector2(-3.0, 0.0), Color(0.35, 0.80, 1.0, 0.28), 6.0, true)
-	draw_circle(center, 10.0 * pulse, Color(0.30, 0.75, 1.0, 0.14))
-	draw_circle(center, 6.0 * pulse, Color("#65d7ff"))
-	draw_circle(center + Vector2(-1.5, -1.8), 2.7, Color("#f4ffff"))
-	draw_arc(center, 8.0 * pulse, 0.0, TAU, 20, Color("#d4f8ff"), 1.2, true)
+	if str(projectile.get("kind", "orb")) == "fireball":
+		draw_line(center + Vector2(-23.0, 2.0), center + Vector2(-4.0, 0.0), Color(0.94, 0.45, 0.20, 0.34), 10.0, true)
+		draw_circle(center, 12.0 * pulse, Color("#c65c35"))
+		draw_circle(center, 8.0 * pulse, Color("#f0a24f"))
+		draw_circle(center + Vector2(1.0, -2.0), 3.5, Color("#fff0c5"))
+		draw_colored_polygon(_star_points(center + Vector2(-1.0, 0.0), 5.0, 10.0), Color("#ffe19a"))
+	else:
+		draw_line(center + Vector2(-20.0, 1.5), center + Vector2(-3.0, 0.0), Color(0.35, 0.80, 1.0, 0.28), 6.0, true)
+		draw_circle(center, 10.0 * pulse, Color(0.30, 0.75, 1.0, 0.14))
+		draw_circle(center, 6.0 * pulse, Color("#65d7ff"))
+		draw_circle(center + Vector2(-1.5, -1.8), 2.7, Color("#f4ffff"))
+		draw_arc(center, 8.0 * pulse, 0.0, TAU, 20, Color("#d4f8ff"), 1.2, true)
 
 func _draw_visual_effect(effect: Dictionary) -> void:
 	var position: Vector2 = effect.get("position", Vector2.ZERO)

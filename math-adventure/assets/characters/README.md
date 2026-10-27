@@ -4,6 +4,9 @@ File PNG transparan yang dibaca otomatis:
 - `plusy.png`
 - `addy_cannon.png`
 - `shield_cube.png`
+- `multiply_dragon.png`
+- `fraction_fairy.png`
+- `number_knight.png`
 - `error_blob.png`
 - `minus_monster.png`
 - `calculator_bug.png`

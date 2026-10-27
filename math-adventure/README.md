@@ -25,3 +25,8 @@ Prototipe game edukasi tower defense mobile untuk Godot 4.7.2. Aset visual PNG s
 - `docs/original/`: dokumen desain awal.
 
 Lihat `docs/CHANGELOG_MVP_0.9_MOBILE_USABILITY.md` dan `docs/ANDROID_EXPORT_GUIDE.md` untuk langkah pengujian.
+
+
+## Guardian Aktif v1.3
+
+Build ini mengaktifkan keenam Guardian: Plusy, Addy Cannon, Shield Cube, Multiply Dragon, Fraction Fairy, dan Number Knight. Ringkasan harga, HP, dan kemampuan ada di `docs/CHANGELOG_MVP_1.3_SIX_GUARDIANS.md`.

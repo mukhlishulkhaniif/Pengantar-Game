@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Math-Adventure"
-config/description="Game edukasi matematika tower defense untuk perangkat mobile. Prototype 0.9 mobile usability pass: responsive panels, larger touch-friendly answer controls, and improved Android testing guidance. Art assets are intentionally deferred."
+config/description="Game edukasi matematika tower defense mobile. MVP v1.3 mengaktifkan enam Math Guardian dengan kemampuan berbeda pada arena 5x9."
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 

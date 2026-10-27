@@ -4,7 +4,7 @@ const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
 const WAVE_COUNTS: Array[int] = [4, 5, 6]
-const GUARDIAN_COSTS: Dictionary = {"Plusy": 50, "Addy Cannon": 100, "Shield Cube": 75}
+const GUARDIAN_COSTS: Dictionary = {"Plusy": 50, "Addy Cannon": 100, "Shield Cube": 75, "Multiply Dragon": 140, "Fraction Fairy": 125, "Number Knight": 125}
 
 var energy: int = 150
 var core_hp: int = 120
@@ -52,7 +52,7 @@ var last_wave_segment_state: int = -1
 var question_popup: Control
 var question_popup_open: bool = false
 var guardian_buttons: Array[Button] = []
-var guardian_button_types: Array[String] = ["Plusy", "Addy Cannon", "Shield Cube"]
+var guardian_button_types: Array[String] = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Number Knight"]
 
 func _ready() -> void:
 	randomize()
@@ -136,24 +136,21 @@ func _build_ui() -> void:
 	seed_separator.add_theme_color_override("color", Color("#bba87a"))
 	header.add_child(seed_separator)
 
-	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Guardian 6"]
+	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Number Knight"]
 	var card_titles: Dictionary = {
 		"Plusy": "PLUSY\n50",
 		"Addy Cannon": "ADDY\n100",
 		"Shield Cube": "SHIELD\n75",
-		"Multiply Dragon": "DRAGON\n—",
-		"Fraction Fairy": "FAIRY\n—",
-		"Guardian 6": "GUARDIAN\n—"
+		"Multiply Dragon": "DRAGON\n140",
+		"Fraction Fairy": "FAIRY\n125",
+		"Number Knight": "KNIGHT\n125"
 	}
 	for guardian_type in guardian_button_types:
 		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(card_width, 72), false)
 		guardian_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		guardian_button.add_theme_font_size_override("font_size", 12 if card_width < 90.0 else 13)
-		guardian_button.tooltip_text = str(card_titles[guardian_type]).replace("\n", " ")
-		if GUARDIAN_COSTS.has(guardian_type):
-			guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
-		else:
-			guardian_button.disabled = true
+		guardian_button.tooltip_text = "%s • %d energi" % [guardian_type, int(GUARDIAN_COSTS.get(guardian_type, 0))]
+		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
 		guardian_buttons.append(guardian_button)
 		header.add_child(guardian_button)
 
@@ -513,10 +510,17 @@ func _place_guardian_at(lane: int, column: int) -> void:
 		return
 	energy -= cost
 	var guardian_max_hp: int = 180
-	if guardian_type == "Addy Cannon":
-		guardian_max_hp = 170
-	elif guardian_type == "Shield Cube":
-		guardian_max_hp = 420
+	match guardian_type:
+		"Addy Cannon":
+			guardian_max_hp = 170
+		"Shield Cube":
+			guardian_max_hp = 480
+		"Multiply Dragon":
+			guardian_max_hp = 190
+		"Fraction Fairy":
+			guardian_max_hp = 160
+		"Number Knight":
+			guardian_max_hp = 250
 	guardians.append({
 		"type": guardian_type,
 		"lane": lane,
@@ -524,7 +528,8 @@ func _place_guardian_at(lane: int, column: int) -> void:
 		"hp": guardian_max_hp,
 		"max_hp": guardian_max_hp,
 		"cooldown": 0.0,
-		"energy_timer": 0.0
+		"energy_timer": 0.0,
+		"heal_timer": 0.0
 	})
 	if is_instance_valid(arena):
 		var placed_guardian: Dictionary = guardians[guardians.size() - 1]
@@ -618,27 +623,56 @@ func _update_guardians(delta: float) -> void:
 				energy = mini(999, energy + 5)
 				if is_instance_valid(arena):
 					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+5")
-		elif guardian_type == "Addy Cannon":
+		elif guardian_type == "Addy Cannon" or guardian_type == "Multiply Dragon":
 			guardian["cooldown"] = float(guardian.get("cooldown", 0.0)) - delta
 			if float(guardian["cooldown"]) <= 0.0:
 				var target_index: int = _find_target_index(guardian)
 				if target_index >= 0:
 					var target: Dictionary = enemies[target_index]
 					var guardian_center: Vector2 = arena.get_guardian_center(guardian)
+					var is_dragon: bool = guardian_type == "Multiply Dragon"
 					projectiles.append({
+						"kind": "fireball" if is_dragon else "orb",
 						"lane": int(guardian["lane"]),
-						"x": guardian_center.x + 18.0,
-						"y": arena.get_lane_center(int(guardian["lane"])) - 7.0,
+						"x": guardian_center.x + 20.0,
+						"y": arena.get_lane_center(int(guardian["lane"])) - (10.0 if is_dragon else 7.0),
 						"target_id": int(target["id"]),
-						"speed": 430.0,
-						"damage": 10
+						"speed": 350.0 if is_dragon else 430.0,
+						"damage": 24 if is_dragon else 18,
+						"splash_radius": 78.0 if is_dragon else 0.0,
+						"splash_lane_radius": 1 if is_dragon else 0,
+						"target_lane": int(target["lane"])
 					})
-					arena.add_visual_effect("muzzle", guardian_center + Vector2(23.0, -5.0), Color("#a8e9ff"))
-					guardian["cooldown"] = 0.9
+					if is_dragon:
+						arena.add_visual_effect("muzzle", guardian_center + Vector2(23.0, -5.0), Color("#f0a24f"), "FIRE!")
+						guardian["cooldown"] = 1.7
+					else:
+						arena.add_visual_effect("muzzle", guardian_center + Vector2(23.0, -5.0), Color("#a8e9ff"))
+						guardian["cooldown"] = 0.9
+		elif guardian_type == "Fraction Fairy":
+			guardian["heal_timer"] = float(guardian.get("heal_timer", 0.0)) + delta
+			if float(guardian["heal_timer"]) >= 3.5:
+				guardian["heal_timer"] = float(guardian["heal_timer"]) - 3.5
+				var heal_target_index: int = _find_heal_target_index(guardian, index)
+				if heal_target_index >= 0:
+					var heal_target: Dictionary = guardians[heal_target_index]
+					var old_hp: int = int(heal_target.get("hp", 0))
+					var new_hp: int = mini(int(heal_target.get("max_hp", old_hp)), old_hp + 28)
+					if new_hp > old_hp:
+						heal_target["hp"] = new_hp
+						guardians[heal_target_index] = heal_target
+						if is_instance_valid(arena):
+							arena.add_visual_effect("heal", arena.get_guardian_center(heal_target), Color("#a6e6b8"), "+%d HP" % (new_hp - old_hp))
+		elif guardian_type == "Number Knight":
+			guardian["cooldown"] = maxf(0.0, float(guardian.get("cooldown", 0.0)) - delta)
 		guardians[index] = guardian
 
 func _find_target_index(guardian: Dictionary) -> int:
 	var guardian_center: Vector2 = arena.get_guardian_center(guardian)
+	var guardian_type: String = str(guardian.get("type", ""))
+	var attack_range: float = arena.get_attack_range()
+	if guardian_type == "Multiply Dragon":
+		attack_range *= 1.15
 	var best_index: int = -1
 	var best_distance: float = INF
 	for index in range(enemies.size()):
@@ -646,7 +680,26 @@ func _find_target_index(guardian: Dictionary) -> int:
 		if int(enemy["lane"]) != int(guardian["lane"]):
 			continue
 		var distance: float = float(enemy["x"]) - guardian_center.x
-		if distance > 0.0 and distance <= arena.get_attack_range() and distance < best_distance:
+		if distance > 0.0 and distance <= attack_range and distance < best_distance:
+			best_distance = distance
+			best_index = index
+	return best_index
+
+func _find_heal_target_index(guardian: Dictionary, guardian_index: int) -> int:
+	var best_index: int = -1
+	var best_distance: float = INF
+	for index in range(guardians.size()):
+		if index == guardian_index:
+			continue
+		var target: Dictionary = guardians[index]
+		if int(target.get("hp", 0)) >= int(target.get("max_hp", 0)):
+			continue
+		var lane_distance: int = absi(int(target.get("lane", 0)) - int(guardian.get("lane", 0)))
+		var column_distance: int = absi(int(target.get("column", 0)) - int(guardian.get("column", 0)))
+		if lane_distance > 1 or column_distance > 2:
+			continue
+		var distance: float = float(column_distance) + float(lane_distance) * 1.5
+		if distance < best_distance:
 			best_distance = distance
 			best_index = index
 	return best_index
@@ -662,10 +715,23 @@ func _update_projectiles(delta: float) -> void:
 		projectile["x"] = float(projectile["x"]) + float(projectile["speed"]) * delta
 		if float(projectile["x"]) >= float(target["x"]) - 14.0:
 			var damage: int = int(projectile.get("damage", 10))
-			target["hp"] = int(target["hp"]) - damage
-			enemies[target_index] = target
-			if is_instance_valid(arena):
-				arena.add_visual_effect("hit", Vector2(float(target["x"]), arena.get_lane_center(int(target["lane"]))), Color("#ffd18c"), "-%d" % damage)
+			var impact_x: float = float(target["x"])
+			var impact_lane: int = int(projectile.get("target_lane", target.get("lane", 0)))
+			var splash_radius: float = float(projectile.get("splash_radius", 0.0))
+			var splash_lane_radius: int = int(projectile.get("splash_lane_radius", 0))
+			if splash_radius > 0.0:
+				for enemy_index in range(enemies.size() - 1, -1, -1):
+					var splash_target: Dictionary = enemies[enemy_index]
+					if absf(float(splash_target.get("x", 0.0)) - impact_x) <= splash_radius and absi(int(splash_target.get("lane", 0)) - impact_lane) <= splash_lane_radius:
+						splash_target["hp"] = int(splash_target.get("hp", 0)) - damage
+						enemies[enemy_index] = splash_target
+						if is_instance_valid(arena):
+							arena.add_visual_effect("hit", Vector2(float(splash_target.get("x", impact_x)), arena.get_lane_center(int(splash_target.get("lane", impact_lane)))), Color("#f0a24f"), "-%d" % damage)
+			else:
+				target["hp"] = int(target.get("hp", 0)) - damage
+				enemies[target_index] = target
+				if is_instance_valid(arena):
+					arena.add_visual_effect("hit", Vector2(impact_x, arena.get_lane_center(int(target.get("lane", 0)))), Color("#ffd18c"), "-%d" % damage)
 			projectiles.remove_at(index)
 		else:
 			projectiles[index] = projectile
@@ -690,22 +756,55 @@ func _update_enemies(delta: float) -> void:
 		var blocking_index: int = _find_blocking_guardian(enemy)
 		if blocking_index >= 0:
 			var guardian: Dictionary = guardians[blocking_index]
+			var guardian_type: String = str(guardian.get("type", ""))
 			var guardian_x: float = arena.get_guardian_center(guardian).x
-			# Monster berhenti di depan Guardian dan menyerangnya sampai HP habis.
+			# Monster berhenti di depan Guardian dan harus menghancurkannya sebelum lewat.
 			enemy["x"] = guardian_x + 34.0
+
+			# Number Knight membalas serangan dengan tebasan jarak dekat.
+			if guardian_type == "Number Knight" and float(guardian.get("cooldown", 0.0)) <= 0.0:
+				var knight_damage: int = 26
+				enemy["hp"] = int(enemy.get("hp", 0)) - knight_damage
+				guardian["cooldown"] = 0.82
+				if is_instance_valid(arena):
+					arena.add_visual_effect("hit", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#f1d990"), "-%d" % knight_damage)
+				if int(enemy["hp"]) <= 0:
+					guardians[blocking_index] = guardian
+					if is_instance_valid(arena):
+						arena.add_visual_effect("defeat", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#a6e6b8"), "+20")
+					enemies.remove_at(index)
+					defeated_enemies += 1
+					score += 20
+					continue
+			guardians[blocking_index] = guardian
+
 			enemy["attack_timer"] = float(enemy.get("attack_timer", 0.0)) + delta
 			if float(enemy["attack_timer"]) >= 1.25:
 				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.25
-				guardian["hp"] = int(guardian.get("hp", 180)) - 12
+				var incoming_damage: int = 8 if guardian_type == "Shield Cube" else 12
+				guardian["hp"] = int(guardian.get("hp", 180)) - incoming_damage
 				if is_instance_valid(arena):
-					arena.add_visual_effect("hit", arena.get_guardian_center(guardian), Color("#f2b4a8"), "-12")
+					arena.add_visual_effect("hit", arena.get_guardian_center(guardian), Color("#f2b4a8"), "-%d" % incoming_damage)
+				# Shield Cube memantulkan sebagian serangan sebagai duri pelindung.
+				if guardian_type == "Shield Cube":
+					var thorns_damage: int = 6
+					enemy["hp"] = int(enemy.get("hp", 0)) - thorns_damage
+					if is_instance_valid(arena):
+						arena.add_visual_effect("hit", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#f1d990"), "-%d" % thorns_damage)
 				if int(guardian["hp"]) <= 0:
 					if is_instance_valid(arena):
 						arena.add_visual_effect("defeat", arena.get_guardian_center(guardian), Color("#f2b4a8"), "HANCUR")
 					guardians.remove_at(blocking_index)
-					feedback_label.text = "Guardian hancur"
+					feedback_label.text = "%s hancur" % guardian_type
 				else:
 					guardians[blocking_index] = guardian
+				if int(enemy.get("hp", 0)) <= 0:
+					if is_instance_valid(arena):
+						arena.add_visual_effect("defeat", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#a6e6b8"), "+20")
+					enemies.remove_at(index)
+					defeated_enemies += 1
+					score += 20
+					continue
 			enemies[index] = enemy
 		else:
 			enemy["attack_timer"] = 0.0
@@ -786,27 +885,24 @@ func _update_guardian_button_styles() -> void:
 		"Plusy": Color("#536943"),
 		"Addy Cannon": Color("#637e7a"),
 		"Shield Cube": Color("#9c783e"),
-		"Multiply Dragon": Color("#765b42"),
+		"Multiply Dragon": Color("#89533a"),
 		"Fraction Fairy": Color("#655b7e"),
-		"Guardian 6": Color("#4c5146")
+		"Number Knight": Color("#52616b")
 	}
 	var card_borders: Dictionary = {
 		"Plusy": Color("#d9d0a5"),
 		"Addy Cannon": Color("#d9d0a5"),
 		"Shield Cube": Color("#e8c36f"),
-		"Multiply Dragon": Color("#bba17e"),
-		"Fraction Fairy": Color("#b9a8d6"),
-		"Guardian 6": Color("#77786c")
+		"Multiply Dragon": Color("#f0a24f"),
+		"Fraction Fairy": Color("#c4b0e7"),
+		"Number Knight": Color("#b9d0db")
 	}
 	for index in range(guardian_buttons.size()):
 		var guardian_type: String = guardian_button_types[index]
 		var is_selected: bool = guardian_type == selected_guardian
-		var is_available: bool = GUARDIAN_COSTS.has(guardian_type)
-		var can_afford: bool = is_available and energy >= int(GUARDIAN_COSTS.get(guardian_type, 99999))
+		var can_afford: bool = energy >= int(GUARDIAN_COSTS.get(guardian_type, 99999))
 		guardian_buttons[index].disabled = not can_afford or paused or battle_finished
 		var base_color: Color = card_colors[guardian_type]
-		if not is_available:
-			base_color = base_color.darkened(0.20)
 		var border_color: Color = Color("#e8c36f") if is_selected else card_borders[guardian_type]
 		guardian_buttons[index].add_theme_stylebox_override("normal", _button_style(base_color.lightened(0.12) if is_selected else base_color, border_color, 6, 2))
 		guardian_buttons[index].add_theme_stylebox_override("hover", _button_style(base_color.lightened(0.24), border_color.lightened(0.15), 6, 2))
