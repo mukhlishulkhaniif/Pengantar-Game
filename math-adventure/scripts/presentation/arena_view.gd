@@ -6,8 +6,12 @@ signal slot_clicked(lane: int, column: int)
 
 const LANE_COUNT: int = 5
 const COLUMN_COUNT: int = 9
-const GRID_TOP_MARGIN: float = 8.0
-const GRID_BOTTOM_MARGIN: float = 8.0
+# Batas area bermain dipetakan ke hamparan rumput terbuka pada background.
+# Rasio ini responsif terhadap ukuran Control, sehingga grid tetap sejajar di HP.
+const GRID_LEFT_RATIO: float = 0.09
+const GRID_RIGHT_RATIO: float = 0.085
+const GRID_TOP_RATIO: float = 0.19
+const GRID_BOTTOM_RATIO: float = 0.16
 const BACKGROUND_TEXTURE_PATH: String = "res://assets/backgrounds/addition_forest_bg.png"
 const GUARDIAN_TEXTURE_PATHS: Dictionary = {
 	"Plusy": "res://assets/characters/plusy.png",
@@ -44,8 +48,7 @@ func _ready() -> void:
 	mouse_exited.connect(_on_mouse_exited)
 
 func _load_optional_art_assets() -> void:
-	# PNG akan dibuat sebagai aset orisinal pada tahap art. Selama file belum ada,
-	# prototipe tetap memakai ilustrasi prosedural agar scene tetap bisa dijalankan.
+	# Muat PNG Guardian transparan jika tersedia. Ilustrasi prosedural tetap menjadi fallback.
 	if ResourceLoader.exists(BACKGROUND_TEXTURE_PATH):
 		background_texture = load(BACKGROUND_TEXTURE_PATH) as Texture2D
 	for guardian_type in GUARDIAN_TEXTURE_PATHS:
@@ -121,7 +124,8 @@ func _draw_garden_background() -> void:
 	var cell_width: float = grid.size.x / float(COLUMN_COUNT)
 	var lane_height: float = grid.size.y / float(LANE_COUNT)
 
-	# Bingkai tanah dan garis tepi seperti papan kebun.
+	# Fallback mengisi seluruh canvas dengan hijau tua, lalu menandai area rumput terbuka.
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#263a24"), true)
 	draw_rect(grid.grow(5.0), Color("#171a13"), true)
 	draw_rect(grid.grow(2.0), Color("#b38d4b"), true)
 	draw_rect(grid, Color("#344c2c"), true)
@@ -187,25 +191,47 @@ func _draw_garden_background() -> void:
 					draw_rect(cell_rect.grow(-5.0), hover_color.lightened(0.30), false, 2.0, true)
 
 func _draw_ink_grid_overlay() -> void:
+	# Grid hanya ditampilkan pada hamparan rumput terbuka, bukan pada dekorasi tepi.
 	var grid: Rect2 = _grid_rect()
 	var cell_width: float = grid.size.x / float(COLUMN_COUNT)
 	var lane_height: float = grid.size.y / float(LANE_COUNT)
+
+	# Lapisan warna yang sangat tipis membantu anak membaca petak tanpa menutupi tekstur.
+	for lane in range(LANE_COUNT):
+		for column in range(COLUMN_COUNT):
+			var cell_rect := Rect2(
+				grid.position.x + float(column) * cell_width,
+				grid.position.y + float(lane) * lane_height,
+				cell_width,
+				lane_height
+			)
+			var tint: Color
+			if (lane + column) % 2 == 0:
+				tint = Color(0.88, 0.96, 0.60, 0.055)
+			else:
+				tint = Color(0.08, 0.18, 0.05, 0.045)
+			draw_rect(cell_rect, tint, true)
+
+			if placement_enabled:
+				draw_rect(cell_rect.grow(-3.0), Color(0.95, 0.87, 0.65, 0.035), false, 1.0, true)
+				if hovered_cell == Vector2i(lane, column):
+					var hover_color: Color = Color(0.68, 0.28, 0.20, 0.28) if _cell_is_occupied(lane, column) else Color(0.85, 0.95, 0.50, 0.24)
+					draw_rect(cell_rect.grow(-4.0), hover_color, true)
+					draw_rect(cell_rect.grow(-4.0), Color("#f4e5b7"), false, 2.0, true)
+
+	# Garis vertikal dan horizontal dibuat dari koordinat matematis yang sama
+	# dengan fungsi penempatan, sehingga 9 kolom dan 5 baris selalu simetris.
 	for column_line in range(COLUMN_COUNT + 1):
 		var x: float = grid.position.x + float(column_line) * cell_width
-		draw_line(Vector2(x, grid.position.y), Vector2(x, grid.position.y + grid.size.y), Color(0.10, 0.12, 0.08, 0.18), 1.2, true)
+		draw_line(Vector2(x, grid.position.y), Vector2(x, grid.position.y + grid.size.y), Color(0.12, 0.16, 0.08, 0.30), 1.8, true)
+		draw_line(Vector2(x + 1.0, grid.position.y), Vector2(x + 1.0, grid.position.y + grid.size.y), Color(0.93, 0.91, 0.66, 0.14), 0.8, true)
 	for lane_line in range(LANE_COUNT + 1):
 		var y: float = grid.position.y + float(lane_line) * lane_height
-		draw_line(Vector2(grid.position.x, y), Vector2(grid.position.x + grid.size.x, y), Color(0.10, 0.12, 0.08, 0.28), 2.0, true)
-	if placement_enabled:
-		for lane in range(LANE_COUNT):
-			for column in range(COLUMN_COUNT):
-				var cell_rect := Rect2(grid.position.x + float(column) * cell_width, grid.position.y + float(lane) * lane_height, cell_width, lane_height)
-				draw_rect(cell_rect.grow(-4.0), Color(0.95, 0.87, 0.65, 0.08), false, 1.0, true)
-				if hovered_cell == Vector2i(lane, column):
-					var hover_color: Color = Color(0.68, 0.28, 0.20, 0.28) if _cell_is_occupied(lane, column) else Color(0.85, 0.72, 0.37, 0.30)
-					draw_rect(cell_rect.grow(-5.0), hover_color, true)
-					draw_rect(cell_rect.grow(-5.0), Color("#171a13"), false, 2.0, true)
-	draw_rect(grid.grow(3.0), Color("#171a13"), false, 3.0, true)
+		draw_line(Vector2(grid.position.x, y), Vector2(grid.position.x + grid.size.x, y), Color(0.12, 0.16, 0.08, 0.34), 2.0, true)
+		draw_line(Vector2(grid.position.x, y + 1.0), Vector2(grid.position.x + grid.size.x, y + 1.0), Color(0.93, 0.91, 0.66, 0.12), 0.8, true)
+
+	# Bingkai tipis menjaga batas arena jelas tanpa menutupi ilustrasi background.
+	draw_rect(grid, Color("#1c2518"), false, 2.2, true)
 
 func _draw_core_gate() -> void:
 	var grid: Rect2 = _grid_rect()
@@ -267,25 +293,49 @@ func _draw_drag_preview() -> void:
 		_draw_guardian_icon(drag_guardian_type, center, 0.76)
 
 func _draw_guardian(guardian: Dictionary) -> void:
-	var center: Vector2 = get_guardian_center(guardian)
-	var bob_seed: float = float(int(guardian.get("lane", 0)) * 7 + int(guardian.get("column", 0)))
-	center += Vector2(0.0, sin(visual_time * 2.3 + bob_seed) * 2.0)
-	_draw_ellipse(center + Vector2(0.0, 35.0), 31.0, 8.0, Color(0.0, 0.0, 0.0, 0.20))
+	var world_center: Vector2 = get_guardian_center(guardian)
+	var lane_seed: float = float(int(guardian.get("lane", 0)) * 7 + int(guardian.get("column", 0)))
+	var phase: float = visual_time * 2.15 + lane_seed
+	var bob: float = sin(phase) * 2.8
+	var center: Vector2 = world_center + Vector2(0.0, bob)
 	var guardian_type: String = str(guardian.get("type", "Plusy"))
+	var attack_anim: float = clampf(float(guardian.get("attack_anim", 0.0)) / 0.24, 0.0, 1.0)
+	var hurt_anim: float = clampf(float(guardian.get("hurt_anim", 0.0)) / 0.20, 0.0, 1.0)
+
+	# Bayangan tetap menempel di tanah, sementara karakter melakukan idle/serang/terkena hit.
+	var shadow_scale: float = 1.0 + sin(phase) * 0.035
+	_draw_ellipse(world_center + Vector2(0.0, 35.0), 29.0 * shadow_scale, 7.5 * shadow_scale, Color(0.0, 0.0, 0.0, 0.20))
+
+	# Rubber-hose motion: bob kecil, squash-and-stretch, dan recoil saat menembak.
+	var breathe: float = sin(phase * 1.15) * 0.025
+	var squash: float = attack_anim * 0.075 + hurt_anim * 0.06
+	var sprite_scale := Vector2(1.0 + breathe + squash, 1.0 - breathe - squash * 0.65)
+	var sprite_rotation: float = sin(phase * 0.58) * deg_to_rad(2.0) - attack_anim * deg_to_rad(7.0) + hurt_anim * deg_to_rad(3.0)
+	if hurt_anim > 0.0:
+		sprite_rotation += sin(visual_time * 48.0) * deg_to_rad(2.5) * hurt_anim
+
+	draw_set_transform(center + Vector2(0.0, -2.0), sprite_rotation, sprite_scale)
 	if guardian_textures.has(guardian_type):
 		var texture: Texture2D = guardian_textures[guardian_type]
-		var sprite_size := Vector2(60.0, 70.0)
+		var max_size := Vector2(68.0, 72.0)
 		if guardian_type == "Addy Cannon":
-			sprite_size = Vector2(74.0, 66.0)
-		draw_texture_rect(texture, Rect2(center - sprite_size * 0.5 + Vector2(0.0, -2.0), sprite_size), false)
+			max_size = Vector2(76.0, 64.0)
+		var ratio: float = float(texture.get_width()) / maxf(float(texture.get_height()), 1.0)
+		var sprite_size := max_size
+		if ratio > max_size.x / max_size.y:
+			sprite_size = Vector2(max_size.x, max_size.x / ratio)
+		else:
+			sprite_size = Vector2(max_size.y * ratio, max_size.y)
+		draw_texture_rect(texture, Rect2(-sprite_size * 0.5, sprite_size), false)
 	else:
-		_draw_guardian_icon(guardian_type, center, 1.0)
+		_draw_guardian_icon(guardian_type, Vector2.ZERO, 1.0)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# Semua Guardian memiliki HP dan bar kesehatan yang selalu terlihat.
+	# Semua Guardian memiliki HP dan bar kesehatan yang tetap stabil, tidak ikut miring.
 	var max_hp: float = maxf(float(guardian.get("max_hp", 160)), 1.0)
 	var hp_ratio: float = clampf(float(guardian.get("hp", max_hp)) / max_hp, 0.0, 1.0)
 	var bar_width: float = 48.0
-	var bar_position := Vector2(center.x - bar_width * 0.5, center.y + 34.0)
+	var bar_position := Vector2(world_center.x - bar_width * 0.5, world_center.y + 34.0)
 	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#171a13"), true)
 	draw_rect(Rect2(bar_position, Vector2(bar_width * hp_ratio, 6.0)), Color("#a6e6b8") if hp_ratio > 0.35 else Color("#b95c49"), true)
 	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#eee2c4"), false, 1.0, true)
@@ -384,68 +434,78 @@ func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: fl
 func _draw_enemy(enemy: Dictionary) -> void:
 	var enemy_lane: int = int(enemy.get("lane", 0))
 	var enemy_id: float = float(enemy.get("id", 0))
-	var walk: float = sin(visual_time * 8.0 + enemy_id) * 4.0
-	var center := Vector2(float(enemy.get("x", size.x - 35.0)), get_lane_center(enemy_lane) + sin(visual_time * 4.0 + enemy_id) * 2.4)
+	var phase: float = visual_time * 8.0 + enemy_id
+	var walk: float = sin(phase) * 4.0
+	var world_center := Vector2(float(enemy.get("x", size.x - 35.0)), get_lane_center(enemy_lane) + sin(visual_time * 4.0 + enemy_id) * 2.4)
 	var enemy_type: String = str(enemy.get("type", "Error Blob"))
 	var enemy_color: Color = Color("#ed7b83")
 	if enemy_type == "Minus Monster":
 		enemy_color = Color("#a778df")
 	elif enemy_type == "Calculator Bug":
 		enemy_color = Color("#eea04d")
+	var hit_flash: float = clampf(float(enemy.get("hit_flash", 0.0)) / 0.16, 0.0, 1.0)
 
-	_draw_ellipse(center + Vector2(0.0, 28.0), 24.0, 7.0, Color(0.0, 0.0, 0.0, 0.20))
+	_draw_ellipse(world_center + Vector2(0.0, 28.0), 23.0, 7.0, Color(0.0, 0.0, 0.0, 0.20))
+	# Monster berjalan dengan kaki bergantian, badan memantul dan squash saat melangkah.
+	var step: float = sin(phase) * 0.045
+	var body_scale := Vector2(1.0 + step, 1.0 - step)
+	var body_rotation: float = sin(phase * 0.5) * deg_to_rad(2.4)
+	if hit_flash > 0.0:
+		body_scale *= Vector2(1.0 - hit_flash * 0.08, 1.0 + hit_flash * 0.08)
+		body_rotation += sin(visual_time * 55.0) * deg_to_rad(4.0) * hit_flash
+
+	draw_set_transform(world_center + Vector2(0.0, -2.0), body_rotation, body_scale)
 	if enemy_textures.has(enemy_type):
 		var enemy_texture: Texture2D = enemy_textures[enemy_type]
 		var sprite_size := Vector2(58.0, 64.0)
 		if enemy_type == "Calculator Bug":
 			sprite_size = Vector2(60.0, 60.0)
-		draw_texture_rect(enemy_texture, Rect2(center - sprite_size * 0.5 + Vector2(0.0, -2.0), sprite_size), false)
-		_draw_enemy_health_bar(center, enemy)
-		return
-	# Fallback procedural enemy, dipakai sampai PNG orisinal tersedia.
-	draw_line(center + Vector2(-12.0, 10.0), center + Vector2(-21.0, 20.0 + walk), enemy_color.darkened(0.22), 5.0, true)
-	draw_line(center + Vector2(12.0, 10.0), center + Vector2(21.0, 20.0 - walk), enemy_color.darkened(0.22), 5.0, true)
-	draw_line(center + Vector2(-7.0, 18.0), center + Vector2(-12.0, 28.0 + walk), enemy_color.darkened(0.28), 5.0, true)
-	draw_line(center + Vector2(7.0, 18.0), center + Vector2(12.0, 28.0 - walk), enemy_color.darkened(0.28), 5.0, true)
-
-	if enemy_type == "Minus Monster":
-		var spikes: PackedVector2Array = _spike_points(center, 25.0, 9)
-		draw_colored_polygon(spikes, enemy_color)
-		var outline: PackedVector2Array = spikes.duplicate()
-		outline.append(spikes[0])
-		draw_polyline(outline, Color("#e8d8ff"), 2.0, true)
-		draw_line(center + Vector2(-10.0, -15.0), center + Vector2(-13.0, -23.0), Color("#7144aa"), 4.0, true)
-		draw_line(center + Vector2(10.0, -15.0), center + Vector2(13.0, -23.0), Color("#7144aa"), 4.0, true)
-		draw_line(center + Vector2(-8.0, 7.0), center + Vector2(8.0, 7.0), Color("#563174"), 4.0, true)
-	elif enemy_type == "Calculator Bug":
-		draw_line(center + Vector2(-8.0, -14.0), center + Vector2(-13.0, -25.0), Color("#9b5b2a"), 2.5, true)
-		draw_line(center + Vector2(8.0, -14.0), center + Vector2(13.0, -25.0), Color("#9b5b2a"), 2.5, true)
-		draw_circle(center + Vector2(-13.0, -25.0), 3.5, Color("#ffe6a4"))
-		draw_circle(center + Vector2(13.0, -25.0), 3.5, Color("#ffe6a4"))
-		draw_rect(Rect2(center.x - 19.0, center.y - 19.0, 38.0, 39.0), Color("#9b5b2a"), true)
-		draw_rect(Rect2(center.x - 16.0, center.y - 16.0, 32.0, 33.0), enemy_color, true)
-		draw_rect(Rect2(center.x - 11.0, center.y - 12.0, 22.0, 9.0), Color("#633f2c"), true)
-		draw_string(ThemeDB.fallback_font, Vector2(center.x - 10.0, center.y - 5.0), "−", HORIZONTAL_ALIGNMENT_CENTER, 20.0, 10, Color("#fff0c8"))
-		for key_index in range(3):
-			draw_rect(Rect2(center.x - 10.0 + float(key_index) * 8.0, center.y + 1.0, 5.0, 5.0), Color("#fff0c8"), true)
+		var tint := Color(1.0, 1.0 - hit_flash * 0.30, 1.0 - hit_flash * 0.30, 1.0)
+		draw_texture_rect(enemy_texture, Rect2(-sprite_size * 0.5, sprite_size), false, tint)
 	else:
-		_draw_ellipse(center, 21.0, 23.0, enemy_color)
-		_draw_ellipse(center + Vector2(-8.0, -10.0), 7.0, 4.0, Color(1.0, 0.87, 0.86, 0.46), -0.35)
-		draw_circle(center + Vector2(-7.0, 0.0), 5.0, Color("#fff5e7"))
-		draw_circle(center + Vector2(7.0, 0.0), 5.0, Color("#fff5e7"))
-		draw_circle(center + Vector2(-6.0, 0.0), 2.3, Color("#44273b"))
-		draw_circle(center + Vector2(8.0, 0.0), 2.3, Color("#44273b"))
-		draw_line(center + Vector2(-7.0, 10.0), center + Vector2(7.0, 10.0), Color("#612c3d"), 2.5, true)
-		for tooth in range(3):
-			draw_line(center + Vector2(-4.0 + float(tooth) * 4.0, 10.0), center + Vector2(-4.0 + float(tooth) * 4.0, 13.0), Color("#fff1dc"), 1.3, true)
-
-	if enemy_type != "Error Blob":
-		draw_circle(center + Vector2(-6.0, -4.0), 4.2, Color("#fff5e7"))
-		draw_circle(center + Vector2(7.0, -4.0), 4.2, Color("#fff5e7"))
-		draw_circle(center + Vector2(-5.0, -4.0), 2.0, Color("#38243d"))
-		draw_circle(center + Vector2(8.0, -4.0), 2.0, Color("#38243d"))
-
-	_draw_enemy_health_bar(center, enemy)
+		# Fallback prosedural tetap dianimasikan jika PNG monster belum tersedia.
+		var center := Vector2.ZERO
+		draw_line(center + Vector2(-12.0, 10.0), center + Vector2(-21.0, 20.0 + walk), enemy_color.darkened(0.22), 5.0, true)
+		draw_line(center + Vector2(12.0, 10.0), center + Vector2(21.0, 20.0 - walk), enemy_color.darkened(0.22), 5.0, true)
+		draw_line(center + Vector2(-7.0, 18.0), center + Vector2(-12.0, 28.0 + walk), enemy_color.darkened(0.28), 5.0, true)
+		draw_line(center + Vector2(7.0, 18.0), center + Vector2(12.0, 28.0 - walk), enemy_color.darkened(0.28), 5.0, true)
+		if enemy_type == "Minus Monster":
+			var spikes: PackedVector2Array = _spike_points(center, 25.0, 9)
+			draw_colored_polygon(spikes, enemy_color.lightened(hit_flash * 0.35))
+			var outline: PackedVector2Array = spikes.duplicate()
+			outline.append(spikes[0])
+			draw_polyline(outline, Color("#e8d8ff"), 2.0, true)
+			draw_line(center + Vector2(-10.0, -15.0), center + Vector2(-13.0, -23.0), Color("#7144aa"), 4.0, true)
+			draw_line(center + Vector2(10.0, -15.0), center + Vector2(13.0, -23.0), Color("#7144aa"), 4.0, true)
+			draw_line(center + Vector2(-8.0, 7.0), center + Vector2(8.0, 7.0), Color("#563174"), 4.0, true)
+		elif enemy_type == "Calculator Bug":
+			draw_line(center + Vector2(-8.0, -14.0), center + Vector2(-13.0, -25.0), Color("#9b5b2a"), 2.5, true)
+			draw_line(center + Vector2(8.0, -14.0), center + Vector2(13.0, -25.0), Color("#9b5b2a"), 2.5, true)
+			draw_circle(center + Vector2(-13.0, -25.0), 3.5, Color("#ffe6a4"))
+			draw_circle(center + Vector2(13.0, -25.0), 3.5, Color("#ffe6a4"))
+			draw_rect(Rect2(center.x - 19.0, center.y - 19.0, 38.0, 39.0), Color("#9b5b2a"), true)
+			draw_rect(Rect2(center.x - 16.0, center.y - 16.0, 32.0, 33.0), enemy_color.lightened(hit_flash * 0.35), true)
+			draw_rect(Rect2(center.x - 11.0, center.y - 12.0, 22.0, 9.0), Color("#633f2c"), true)
+			draw_string(ThemeDB.fallback_font, Vector2(center.x - 10.0, center.y - 5.0), "−", HORIZONTAL_ALIGNMENT_CENTER, 20.0, 10, Color("#fff0c8"))
+			for key_index in range(3):
+				draw_rect(Rect2(center.x - 10.0 + float(key_index) * 8.0, center.y + 1.0, 5.0, 5.0), Color("#fff0c8"), true)
+		else:
+			_draw_ellipse(center, 21.0, 23.0, enemy_color.lightened(hit_flash * 0.35))
+			_draw_ellipse(center + Vector2(-8.0, -10.0), 7.0, 4.0, Color(1.0, 0.87, 0.86, 0.46), -0.35)
+			draw_circle(center + Vector2(-7.0, 0.0), 5.0, Color("#fff5e7"))
+			draw_circle(center + Vector2(7.0, 0.0), 5.0, Color("#fff5e7"))
+			draw_circle(center + Vector2(-6.0, 0.0), 2.3, Color("#44273b"))
+			draw_circle(center + Vector2(8.0, 0.0), 2.3, Color("#44273b"))
+			draw_line(center + Vector2(-7.0, 10.0), center + Vector2(7.0, 10.0), Color("#612c3d"), 2.5, true)
+			for tooth in range(3):
+				draw_line(center + Vector2(-4.0 + float(tooth) * 4.0, 10.0), center + Vector2(-4.0 + float(tooth) * 4.0, 13.0), Color("#fff1dc"), 1.3, true)
+		if enemy_type != "Error Blob":
+			draw_circle(center + Vector2(-6.0, -4.0), 4.2, Color("#fff5e7"))
+			draw_circle(center + Vector2(7.0, -4.0), 4.2, Color("#fff5e7"))
+			draw_circle(center + Vector2(-5.0, -4.0), 2.0, Color("#38243d"))
+			draw_circle(center + Vector2(8.0, -4.0), 2.0, Color("#38243d"))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_enemy_health_bar(world_center, enemy)
 
 func _draw_enemy_health_bar(center: Vector2, enemy: Dictionary) -> void:
 	var hp: float = float(enemy.get("hp", 50))
@@ -559,7 +619,23 @@ func _star_points(center: Vector2, inner_radius: float, outer_radius: float) -> 
 	return points
 
 func _grid_rect() -> Rect2:
-	return Rect2(Vector2(30.0, GRID_TOP_MARGIN), Vector2(maxf(size.x - 40.0, 1.0), maxf(size.y - GRID_TOP_MARGIN - GRID_BOTTOM_MARGIN, 1.0)))
+	# Posisi grid relatif terhadap ukuran arena. Menyisakan tepi dekoratif
+	# pada background dan menempatkan seluruh 45 petak di area rumput terbuka.
+	var left: float = size.x * GRID_LEFT_RATIO
+	var right: float = size.x * GRID_RIGHT_RATIO
+	var top: float = size.y * GRID_TOP_RATIO
+	var bottom: float = size.y * GRID_BOTTOM_RATIO
+	return Rect2(
+		Vector2(left, top),
+		Vector2(maxf(size.x - left - right, 1.0), maxf(size.y - top - bottom, 1.0))
+	)
+
+func get_grid_left_edge() -> float:
+	return _grid_rect().position.x
+
+func get_grid_right_edge() -> float:
+	var grid: Rect2 = _grid_rect()
+	return grid.position.x + grid.size.x
 
 func get_guardian_center(guardian: Dictionary) -> Vector2:
 	var grid: Rect2 = _grid_rect()

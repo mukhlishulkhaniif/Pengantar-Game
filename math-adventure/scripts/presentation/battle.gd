@@ -529,7 +529,9 @@ func _place_guardian_at(lane: int, column: int) -> void:
 		"max_hp": guardian_max_hp,
 		"cooldown": 0.0,
 		"energy_timer": 0.0,
-		"heal_timer": 0.0
+		"heal_timer": 0.0,
+		"attack_anim": 0.0,
+		"hurt_anim": 0.0
 	})
 	if is_instance_valid(arena):
 		var placed_guardian: Dictionary = guardians[guardians.size() - 1]
@@ -602,12 +604,14 @@ func _spawn_enemy() -> void:
 		"id": next_enemy_id,
 		"type": enemy_type,
 		"lane": lane,
-		"x": maxf(arena.size.x - 30.0, 400.0),
+		# Musuh masuk dari sisi kanan area bermain, bukan dari atas dekorasi.
+		"x": arena.get_grid_right_edge() + 34.0,
 		"hp": hp,
 		"max_hp": hp,
 		"speed": speed,
 		"core_damage": core_damage,
-		"attack_timer": 0.0
+		"attack_timer": 0.0,
+		"hit_flash": 0.0
 	})
 	next_enemy_id += 1
 	spawned_this_wave += 1
@@ -616,6 +620,8 @@ func _update_guardians(delta: float) -> void:
 	for index in range(guardians.size()):
 		var guardian: Dictionary = guardians[index]
 		var guardian_type: String = str(guardian["type"])
+		guardian["attack_anim"] = maxf(0.0, float(guardian.get("attack_anim", 0.0)) - delta)
+		guardian["hurt_anim"] = maxf(0.0, float(guardian.get("hurt_anim", 0.0)) - delta)
 		if guardian_type == "Plusy":
 			guardian["energy_timer"] = float(guardian.get("energy_timer", 0.0)) + delta
 			if float(guardian["energy_timer"]) >= 5.0:
@@ -643,6 +649,7 @@ func _update_guardians(delta: float) -> void:
 						"splash_lane_radius": 1 if is_dragon else 0,
 						"target_lane": int(target["lane"])
 					})
+					guardian["attack_anim"] = 0.24
 					if is_dragon:
 						arena.add_visual_effect("muzzle", guardian_center + Vector2(23.0, -5.0), Color("#f0a24f"), "FIRE!")
 						guardian["cooldown"] = 1.7
@@ -724,11 +731,13 @@ func _update_projectiles(delta: float) -> void:
 					var splash_target: Dictionary = enemies[enemy_index]
 					if absf(float(splash_target.get("x", 0.0)) - impact_x) <= splash_radius and absi(int(splash_target.get("lane", 0)) - impact_lane) <= splash_lane_radius:
 						splash_target["hp"] = int(splash_target.get("hp", 0)) - damage
+						splash_target["hit_flash"] = 0.16
 						enemies[enemy_index] = splash_target
 						if is_instance_valid(arena):
 							arena.add_visual_effect("hit", Vector2(float(splash_target.get("x", impact_x)), arena.get_lane_center(int(splash_target.get("lane", impact_lane)))), Color("#f0a24f"), "-%d" % damage)
 			else:
 				target["hp"] = int(target.get("hp", 0)) - damage
+				target["hit_flash"] = 0.16
 				enemies[target_index] = target
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", Vector2(impact_x, arena.get_lane_center(int(target.get("lane", 0)))), Color("#ffd18c"), "-%d" % damage)
@@ -745,6 +754,7 @@ func _find_enemy_by_id(enemy_id: int) -> int:
 func _update_enemies(delta: float) -> void:
 	for index in range(enemies.size() - 1, -1, -1):
 		var enemy: Dictionary = enemies[index]
+		enemy["hit_flash"] = maxf(0.0, float(enemy.get("hit_flash", 0.0)) - delta)
 		if int(enemy["hp"]) <= 0:
 			if is_instance_valid(arena):
 				arena.add_visual_effect("defeat", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#a6e6b8"), "+20")
@@ -765,6 +775,8 @@ func _update_enemies(delta: float) -> void:
 			if guardian_type == "Number Knight" and float(guardian.get("cooldown", 0.0)) <= 0.0:
 				var knight_damage: int = 26
 				enemy["hp"] = int(enemy.get("hp", 0)) - knight_damage
+				enemy["hit_flash"] = 0.16
+				guardian["attack_anim"] = 0.24
 				guardian["cooldown"] = 0.82
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#f1d990"), "-%d" % knight_damage)
@@ -783,6 +795,7 @@ func _update_enemies(delta: float) -> void:
 				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.25
 				var incoming_damage: int = 8 if guardian_type == "Shield Cube" else 12
 				guardian["hp"] = int(guardian.get("hp", 180)) - incoming_damage
+				guardian["hurt_anim"] = 0.20
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", arena.get_guardian_center(guardian), Color("#f2b4a8"), "-%d" % incoming_damage)
 				# Shield Cube memantulkan sebagian serangan sebagai duri pelindung.
@@ -809,11 +822,12 @@ func _update_enemies(delta: float) -> void:
 		else:
 			enemy["attack_timer"] = 0.0
 			enemy["x"] = float(enemy["x"]) - float(enemy["speed"]) * delta
-			if float(enemy["x"]) <= 18.0:
+			var core_line: float = arena.get_grid_left_edge() - 14.0
+			if float(enemy["x"]) <= core_line:
 				var core_damage_amount: int = int(enemy.get("core_damage", 12))
 				core_hp -= core_damage_amount
 				if is_instance_valid(arena):
-					arena.add_visual_effect("hit", Vector2(26.0, arena.get_lane_center(int(enemy["lane"]))), Color("#f2b4a8"), "CORE -%d" % core_damage_amount)
+					arena.add_visual_effect("hit", Vector2(core_line, arena.get_lane_center(int(enemy["lane"]))), Color("#f2b4a8"), "CORE -%d" % core_damage_amount)
 				if str(enemy["type"]) == "Minus Monster":
 					energy = maxi(0, energy - 10)
 					feedback_label.text = "Inti -%d • Energi -10" % core_damage_amount
