@@ -63,21 +63,21 @@ Pemain harus:
 
 ## Core Gameplay Loop
 
-    Musuh menyerang
-            ↓
-    Soal matematika muncul
-            ↓
-    Pemain menjawab soal
-            ↓
-    Mendapat Math Energy
-            ↓
-    Memanggil Math Guardian
-            ↓
-    Guardian menyerang musuh
-            ↓
-    Menyelesaikan wave
-            ↓
-    Membuka level baru
+	Musuh menyerang
+			↓
+	Soal matematika muncul
+			↓
+	Pemain menjawab soal
+			↓
+	Mendapat Math Energy
+			↓
+	Memanggil Math Guardian
+			↓
+	Guardian menyerang musuh
+			↓
+	Menyelesaikan wave
+			↓
+	Membuka level baru
 
 ------------------------------------------------------------------------
 
@@ -89,12 +89,12 @@ Pemain memperoleh Math Energy dengan menjawab soal matematika.
 
 Contoh:
 
-    12 + 8 = ?
+	12 + 8 = ?
 
-    A. 18
-    B. 20
-    C. 22
-    D. 24
+	A. 18
+	B. 20
+	C. 22
+	D. 24
 
 Jawaban benar: - Mendapat energi. - Meningkatkan combo. - Membantu
 membeli Guardian.
@@ -310,13 +310,13 @@ Versi awal untuk tugas:
 
 # 14. Struktur Project Godot
 
-    AdventureMath/
+	AdventureMath/
 
-    ├── scenes/
-    ├── scripts/
-    ├── assets/
-    ├── data/
-    └── resources/
+	├── scenes/
+	├── scripts/
+	├── assets/
+	├── data/
+	└── resources/
 
 Sistem utama:
 

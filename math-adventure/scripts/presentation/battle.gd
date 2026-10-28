@@ -806,7 +806,7 @@ func _update_enemies(delta: float) -> void:
 						arena.add_visual_effect("hit", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#f1d990"), "-%d" % thorns_damage)
 				if int(guardian["hp"]) <= 0:
 					if is_instance_valid(arena):
-						arena.add_visual_effect("defeat", arena.get_guardian_center(guardian), Color("#f2b4a8"), "HANCUR")
+						arena.add_visual_effect("guardian_break", arena.get_guardian_center(guardian), Color("#f2b4a8"), "HANCUR")
 					guardians.remove_at(blocking_index)
 					feedback_label.text = "%s hancur" % guardian_type
 				else:

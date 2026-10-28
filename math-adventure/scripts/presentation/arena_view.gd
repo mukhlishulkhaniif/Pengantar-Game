@@ -81,10 +81,21 @@ func _process(delta: float) -> void:
 
 func add_visual_effect(kind: String, position: Vector2, color: Color, text: String = "") -> void:
 	var duration: float = 0.48
-	if kind == "wave":
-		duration = 0.82
-	elif kind == "reward":
-		duration = 0.66
+	match kind:
+		"wave":
+			duration = 0.82
+		"reward":
+			duration = 0.66
+		"muzzle", "spawn":
+			duration = 0.38
+		"heal":
+			duration = 0.72
+		"guardian_break":
+			duration = 0.62
+		"defeat":
+			duration = 0.54
+		"hit":
+			duration = 0.44
 	visual_effects.append({
 		"kind": kind,
 		"position": position,
@@ -331,14 +342,24 @@ func _draw_guardian(guardian: Dictionary) -> void:
 		_draw_guardian_icon(guardian_type, Vector2.ZERO, 1.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# Semua Guardian memiliki HP dan bar kesehatan yang tetap stabil, tidak ikut miring.
+	# Bar HP tetap datar agar mudah dibaca di layar HP.
 	var max_hp: float = maxf(float(guardian.get("max_hp", 160)), 1.0)
 	var hp_ratio: float = clampf(float(guardian.get("hp", max_hp)) / max_hp, 0.0, 1.0)
-	var bar_width: float = 48.0
+	var bar_width: float = 50.0
+	var bar_height: float = 6.0
 	var bar_position := Vector2(world_center.x - bar_width * 0.5, world_center.y + 34.0)
-	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#171a13"), true)
-	draw_rect(Rect2(bar_position, Vector2(bar_width * hp_ratio, 6.0)), Color("#a6e6b8") if hp_ratio > 0.35 else Color("#b95c49"), true)
-	draw_rect(Rect2(bar_position, Vector2(bar_width, 6.0)), Color("#eee2c4"), false, 1.0, true)
+	var bar_rect := Rect2(bar_position, Vector2(bar_width, bar_height))
+	draw_rect(bar_rect.grow(1.0), Color("#171a13"), true)
+	draw_rect(bar_rect, Color("#332e24"), true)
+	var hp_color := Color("#8fcf79")
+	if hp_ratio <= 0.60:
+		hp_color = Color("#e8bd59")
+	if hp_ratio <= 0.30:
+		var low_pulse: float = 0.5 + 0.5 * sin(visual_time * 10.0)
+		hp_color = Color("#e56d58").lerp(Color("#f2b4a8"), low_pulse * 0.45)
+	if hp_ratio > 0.0:
+		draw_rect(Rect2(bar_position, Vector2(bar_width * hp_ratio, bar_height)), hp_color, true)
+	draw_rect(bar_rect, Color("#f1e4c9"), false, 1.0, true)
 
 func _draw_guardian_icon(guardian_type: String, center: Vector2, scale_value: float) -> void:
 	if guardian_type == "Plusy":
@@ -511,9 +532,21 @@ func _draw_enemy_health_bar(center: Vector2, enemy: Dictionary) -> void:
 	var hp: float = float(enemy.get("hp", 50))
 	var max_hp: float = maxf(float(enemy.get("max_hp", 50)), 1.0)
 	var hp_ratio: float = clampf(hp / max_hp, 0.0, 1.0)
-	draw_rect(Rect2(center.x - 23.0, center.y - 34.0, 46.0, 5.0), Color("#171a13"), true)
-	draw_rect(Rect2(center.x - 23.0, center.y - 34.0, 46.0 * hp_ratio, 5.0), Color("#8d9b59") if hp_ratio > 0.35 else Color("#b95c49"), true)
-	draw_rect(Rect2(center.x - 23.0, center.y - 34.0, 46.0, 5.0), Color("#f0e3c7"), false, 1.0, true)
+	var bar_width: float = 48.0
+	var bar_height: float = 6.0
+	var bar_position := Vector2(center.x - bar_width * 0.5, center.y - 36.0)
+	var bar_rect := Rect2(bar_position, Vector2(bar_width, bar_height))
+	draw_rect(bar_rect.grow(1.0), Color("#171a13"), true)
+	draw_rect(bar_rect, Color("#302820"), true)
+	var hp_color := Color("#8fcf79")
+	if hp_ratio <= 0.60:
+		hp_color = Color("#e8bd59")
+	if hp_ratio <= 0.30:
+		var low_pulse: float = 0.5 + 0.5 * sin(visual_time * 12.0 + float(enemy.get("id", 0)))
+		hp_color = Color("#e56d58").lerp(Color("#f2b4a8"), low_pulse * 0.45)
+	if hp_ratio > 0.0:
+		draw_rect(Rect2(bar_position, Vector2(bar_width * hp_ratio, bar_height)), hp_color, true)
+	draw_rect(bar_rect, Color("#f0e3c7"), false, 1.0, true)
 
 func _draw_projectile(projectile: Dictionary) -> void:
 	var center := Vector2(float(projectile.get("x", 0.0)), float(projectile.get("y", 0.0)))
@@ -542,34 +575,100 @@ func _draw_visual_effect(effect: Dictionary) -> void:
 
 	if kind == "wave":
 		var banner_rect := Rect2(position.x - 91.0, position.y - 28.0, 182.0, 34.0)
-		draw_rect(banner_rect, Color(0.04, 0.15, 0.10, 0.82 * color.a), true)
+		draw_rect(banner_rect.grow(3.0), Color(0.05, 0.07, 0.04, 0.50 * color.a), true)
+		draw_rect(banner_rect, Color(0.04, 0.15, 0.10, 0.88 * color.a), true)
 		draw_rect(banner_rect, Color(color.r, color.g, color.b, color.a), false, 2.0, true)
 		draw_string(ThemeDB.fallback_font, Vector2(banner_rect.position.x, banner_rect.position.y + 22.0), str(effect.get("text", "WAVE")), HORIZONTAL_ALIGNMENT_CENTER, banner_rect.size.x, 15, color)
-	elif kind == "reward":
+		return
+
+	if kind == "reward":
 		var star_radius: float = 7.0 + progress * 10.0
 		for star_index in range(4):
 			var angle: float = TAU * float(star_index) / 4.0 + visual_time * 0.8
 			var star_center: Vector2 = position + Vector2(cos(angle), sin(angle)) * (12.0 + progress * 13.0)
 			draw_colored_polygon(_star_points(star_center, star_radius * 0.42, star_radius), Color(color.r, color.g, color.b, color.a * 0.82))
 		draw_string(ThemeDB.fallback_font, position + Vector2(-70.0, -10.0), str(effect.get("text", "+ENERGI")), HORIZONTAL_ALIGNMENT_CENTER, 140.0, 13, color)
-	else:
-		var radius: float = 7.0 + progress * (25.0 if kind == "defeat" else 18.0)
-		draw_arc(position, radius, 0.0, TAU, 28, color, 2.4 if kind == "defeat" else 2.0, true)
-		var particle_count: int = 8 if kind == "defeat" else 6
-		for particle_index in range(particle_count):
-			var angle: float = TAU * float(particle_index) / float(particle_count) + (progress * 0.35)
+		return
+
+	if kind == "muzzle":
+		var muzzle_radius: float = 5.0 + progress * 17.0
+		draw_colored_polygon(_star_points(position, muzzle_radius * 0.48, muzzle_radius), Color(1.0, 0.91, 0.65, color.a))
+		for ray_index in range(6):
+			var ray_angle: float = TAU * float(ray_index) / 6.0 + visual_time * 2.0
+			var ray_dir := Vector2(cos(ray_angle), sin(ray_angle))
+			draw_line(position + ray_dir * (muzzle_radius * 0.35), position + ray_dir * (muzzle_radius + 5.0), color, 2.0, true)
+		var muzzle_text: String = str(effect.get("text", ""))
+		if not muzzle_text.is_empty():
+			draw_string(ThemeDB.fallback_font, position + Vector2(-40.0, -muzzle_radius - 4.0), muzzle_text, HORIZONTAL_ALIGNMENT_CENTER, 80.0, 10, color)
+		return
+
+	if kind == "spawn":
+		var spawn_radius: float = 8.0 + progress * 22.0
+		draw_arc(position, spawn_radius, 0.0, TAU, 24, color, 2.0, true)
+		for particle_index in range(6):
+			var angle: float = TAU * float(particle_index) / 6.0 + progress * 0.7
 			var direction := Vector2(cos(angle), sin(angle))
-			var start_point: Vector2 = position + direction * (radius * 0.50)
-			var end_point: Vector2 = position + direction * (radius + 5.0)
-			draw_line(start_point, end_point, color, 2.0, true)
-			if kind == "defeat":
-				draw_colored_polygon(_star_points(end_point, 2.0, 4.0), color)
-	
+			var particle_pos: Vector2 = position + direction * (spawn_radius * 0.72)
+			draw_colored_polygon(_star_points(particle_pos, 2.0, 4.5), Color(color.r, color.g, color.b, color.a))
+		var spawn_text: String = str(effect.get("text", ""))
+		if not spawn_text.is_empty():
+			draw_string(ThemeDB.fallback_font, position + Vector2(-42.0, -spawn_radius - 3.0), spawn_text, HORIZONTAL_ALIGNMENT_CENTER, 84.0, 10, color)
+		return
+
+	if kind == "heal":
+		var heal_radius: float = 8.0 + progress * 24.0
+		draw_arc(position, heal_radius, 0.0, TAU, 28, Color(color.r, color.g, color.b, color.a * 0.85), 2.5, true)
+		for sparkle_index in range(3):
+			var sparkle_angle: float = visual_time * 2.2 + float(sparkle_index) * TAU / 3.0
+			var sparkle_pos: Vector2 = position + Vector2(cos(sparkle_angle), sin(sparkle_angle)) * (heal_radius * 0.68)
+			draw_colored_polygon(_star_points(sparkle_pos, 2.5, 5.5), Color(color.r, color.g, color.b, color.a))
+		draw_string(ThemeDB.fallback_font, position + Vector2(-45.0, -heal_radius - 5.0), str(effect.get("text", "+HP")), HORIZONTAL_ALIGNMENT_CENTER, 90.0, 12, color)
+		return
+
+	if kind == "guardian_break":
+		var break_radius: float = 7.0 + progress * 28.0
+		draw_arc(position, break_radius, 0.0, TAU, 24, Color(color.r, color.g, color.b, color.a * 0.8), 2.8, true)
+		for shard_index in range(8):
+			var angle: float = TAU * float(shard_index) / 8.0 + 0.18
+			var direction := Vector2(cos(angle), sin(angle))
+			var shard_start: Vector2 = position + direction * (break_radius * 0.28)
+			var shard_end: Vector2 = position + direction * (break_radius + 7.0)
+			draw_line(shard_start, shard_end, color, 2.4, true)
+			draw_colored_polygon(_star_points(shard_end, 1.8, 3.8), Color(color.r, color.g, color.b, color.a))
+		draw_string(ThemeDB.fallback_font, position + Vector2(-48.0, -break_radius - 5.0), str(effect.get("text", "HANCUR")), HORIZONTAL_ALIGNMENT_CENTER, 96.0, 12, color)
+		return
+
+	if kind == "defeat":
+		var radius: float = 7.0 + progress * 27.0
+		draw_arc(position, radius, 0.0, TAU, 28, Color(color.r, color.g, color.b, color.a * 0.92), 2.4, true)
+		for particle_index in range(8):
+			var angle: float = TAU * float(particle_index) / 8.0 + progress * 0.35
+			var direction := Vector2(cos(angle), sin(angle))
+			var particle_start: Vector2 = position + direction * (radius * 0.42)
+			var particle_end: Vector2 = position + direction * (radius + 6.0)
+			draw_line(particle_start, particle_end, color, 2.0, true)
+			draw_colored_polygon(_star_points(particle_end, 1.8, 4.0), Color(color.r, color.g, color.b, color.a))
+		var defeat_text: String = str(effect.get("text", ""))
+		if not defeat_text.is_empty():
+			draw_string(ThemeDB.fallback_font, position + Vector2(-45.0, -radius - 4.0), defeat_text, HORIZONTAL_ALIGNMENT_CENTER, 90.0, 12, color)
+		return
+
+	# Dampak serangan: lingkaran cepat, percikan, dan angka damage yang naik.
+	var radius: float = 5.0 + progress * (20.0 if kind == "hit" else 16.0)
+	draw_arc(position, radius, 0.0, TAU, 20, Color(color.r, color.g, color.b, color.a * 0.88), 2.2, true)
+	for particle_index in range(5):
+		var angle: float = TAU * float(particle_index) / 5.0 + progress * 0.55
+		var direction := Vector2(cos(angle), sin(angle))
+		var start_point: Vector2 = position + direction * (radius * 0.45)
+		var end_point: Vector2 = position + direction * (radius + 4.0)
+		draw_line(start_point, end_point, color, 1.8, true)
+
 	var effect_text: String = str(effect.get("text", ""))
-	if not effect_text.is_empty() and kind != "wave" and kind != "reward":
+	if not effect_text.is_empty():
 		var font_size: int = 13 if kind == "hit" else 12
 		var width: float = 116.0
-		draw_string(ThemeDB.fallback_font, position + Vector2(-width * 0.5, -13.0), effect_text, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
+		var label_position: Vector2 = position + Vector2(-width * 0.5, -14.0 - progress * 8.0)
+		draw_string(ThemeDB.fallback_font, label_position, effect_text, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
 
 func _draw_leaf(center: Vector2, angle: float, length: float, half_width: float, color: Color) -> void:
 	var direction := Vector2(cos(angle), sin(angle))
