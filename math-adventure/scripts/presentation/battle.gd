@@ -51,6 +51,10 @@ var wave_banner_timer: float = 0.0
 var last_wave_segment_state: int = -1
 var question_popup: Control
 var question_popup_open: bool = false
+var question_result_showing: bool = false
+var question_is_wave_challenge: bool = false
+var wave_question_pending: bool = false
+var bonus_question_used_this_wave: bool = false
 var guardian_buttons: Array[Button] = []
 var guardian_button_types: Array[String] = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Number Knight"]
 
@@ -62,6 +66,15 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_update_wave_banner(delta)
+
+	# Setiap wave dimulai dengan satu soal singkat. Soal baru muncul setelah
+	# banner wave selesai agar tidak menutupi pesan pergantian wave.
+	if wave_question_pending and not battle_finished and not paused:
+		var banner_is_visible: bool = is_instance_valid(wave_banner) and wave_banner.visible
+		if not banner_is_visible:
+			wave_question_pending = false
+			_open_question_popup(true)
+
 	if battle_finished or paused:
 		return
 
@@ -291,7 +304,7 @@ func _build_ui() -> void:
 		answer_buttons.append(answer_button)
 		answer_grid.add_child(answer_button)
 
-	var close_button := _make_button("LANJUT BERMAIN", Vector2(0, 46), true)
+	var close_button := _make_button("LEWATI SOAL", Vector2(0, 46), true)
 	close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	close_button.pressed.connect(_close_question_popup)
 	popup_content.add_child(close_button)
@@ -394,10 +407,26 @@ func _difficulty_for_wave() -> String:
 		return "mudah"
 	return "sedang"
 
-func _open_question_popup() -> void:
+func _open_question_popup(is_wave_challenge: bool = false) -> void:
 	if battle_finished or paused or question_popup_open:
 		return
+
+	# Jika pemain membuka tombol energi saat banner wave masih terlihat,
+	# pertanyaan ini menggantikan tantangan otomatis agar tidak muncul dua kali.
+	if wave_question_pending:
+		is_wave_challenge = true
+		wave_question_pending = false
+	elif not is_wave_challenge:
+		if bonus_question_used_this_wave:
+			feedback_label.text = "Soal bonus sudah dipakai pada wave ini."
+			feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
+			return
+		bonus_question_used_this_wave = true
+
+	question_is_wave_challenge = is_wave_challenge
+	_new_question()
 	question_popup_open = true
+	question_result_showing = false
 	paused = true
 	question_popup.visible = true
 	for button in answer_buttons:
@@ -405,12 +434,13 @@ func _open_question_popup() -> void:
 	_refresh_hud()
 
 func _close_question_popup() -> void:
-	if not question_popup_open:
+	if not question_popup_open or question_result_showing:
 		return
 	question_popup_open = false
+	question_is_wave_challenge = false
 	paused = false
 	question_popup.visible = false
-	feedback_label.text = "LANJUT"
+	feedback_label.text = "Soal dilewati • tanpa bonus tambahan"
 	feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
 	_refresh_hud()
 
@@ -418,7 +448,10 @@ func _new_question() -> void:
 	current_question = QuestionGenerator.make_question(_difficulty_for_wave())
 	question_label.text = "%d %s %d = ?" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
 	if is_instance_valid(math_heading):
-		math_heading.text = "TANTANGAN ENERGI"
+		if question_is_wave_challenge:
+			math_heading.text = "TANTANGAN WAVE %d" % current_wave
+		else:
+			math_heading.text = "SOAL BONUS • WAVE %d" % current_wave
 	if is_instance_valid(reward_hint_label):
 		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +10" % int(current_question["reward"])
 	var options: Array = current_question["options"]
@@ -427,11 +460,17 @@ func _new_question() -> void:
 		answer_buttons[index].disabled = false
 
 func _on_answer_pressed(index: int) -> void:
-	if battle_finished or (paused and not question_popup_open) or not question_popup_open or index < 0 or index >= answer_buttons.size():
+	if battle_finished or not question_popup_open or question_result_showing or index < 0 or index >= answer_buttons.size():
 		return
 	var options: Array = current_question["options"]
 	if index >= options.size():
 		return
+
+	# Kunci tombol segera setelah jawaban dipilih untuk mencegah double-tap.
+	question_result_showing = true
+	for button in answer_buttons:
+		button.disabled = true
+
 	var chosen: int = int(options[index])
 	var correct: int = int(current_question["answer"])
 	var question_text: String = "%d %s %d" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
@@ -442,6 +481,9 @@ func _on_answer_pressed(index: int) -> void:
 		"answer": correct,
 		"correct": chosen == correct
 	})
+
+	# Tampilkan pembahasan sebentar sebelum gameplay dilanjutkan.
+	question_label.text = "%s = %d" % [question_text, correct]
 	if chosen == correct:
 		correct_answers += 1
 		combo += 1
@@ -453,6 +495,10 @@ func _on_answer_pressed(index: int) -> void:
 		var combo_text: String = " • KOMBO!" if combo_bonus > 0 else ""
 		feedback_label.text = "+%d energi%s" % [total_reward, combo_text]
 		feedback_label.add_theme_color_override("font_color", Color("#536943"))
+		if is_instance_valid(math_heading):
+			math_heading.text = "HEBAT! JAWABAN BENAR"
+		if is_instance_valid(reward_hint_label):
+			reward_hint_label.text = "+%d ENERGI%s" % [total_reward, combo_text]
 		if is_instance_valid(arena):
 			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#d3ad5b"), "+%d ENERGI" % total_reward)
 	else:
@@ -461,13 +507,23 @@ func _on_answer_pressed(index: int) -> void:
 		energy = mini(999, energy + 10)
 		feedback_label.text = "%s = %d  •  +10 energi" % [question_text, correct]
 		feedback_label.add_theme_color_override("font_color", Color("#b95c49"))
+		if is_instance_valid(math_heading):
+			math_heading.text = "BELUM TEPAT — COBA LAGI"
+		if is_instance_valid(reward_hint_label):
+			reward_hint_label.text = "Jawaban benar • +10 energi tetap diberikan"
 		if is_instance_valid(arena):
 			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %d" % correct)
+
+	_refresh_hud()
+	await get_tree().create_timer(1.15).timeout
+	if not is_instance_valid(question_popup):
+		return
+
 	question_popup_open = false
-	if is_instance_valid(question_popup):
-		question_popup.visible = false
+	question_result_showing = false
+	question_is_wave_challenge = false
 	paused = false
-	_new_question()
+	question_popup.visible = false
 	_refresh_hud()
 
 func _select_guardian(guardian_type: String) -> void:
@@ -550,7 +606,8 @@ func _start_next_wave() -> void:
 	spawn_target = WAVE_COUNTS[current_wave - 1]
 	spawn_timer = 0.0
 	intermission_timer = 0.0
-	_new_question()
+	wave_question_pending = true
+	bonus_question_used_this_wave = false
 	feedback_label.text = ""
 	_show_wave_banner(current_wave)
 
@@ -863,6 +920,8 @@ func _find_blocking_guardian(enemy: Dictionary) -> int:
 func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):
 		energy_button.text = "✦ %d" % energy
+		energy_button.disabled = paused or battle_finished or bonus_question_used_this_wave
+		energy_button.tooltip_text = "Soal bonus sudah dipakai pada wave ini" if bonus_question_used_this_wave else "Jawab satu soal bonus pada wave ini"
 	if is_instance_valid(core_label):
 		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):
@@ -942,6 +1001,8 @@ func _finish_battle(victory: bool) -> void:
 	battle_finished = true
 	paused = false
 	question_popup_open = false
+	question_result_showing = false
+	wave_question_pending = false
 	if is_instance_valid(question_popup):
 		question_popup.visible = false
 	selected_guardian = ""
