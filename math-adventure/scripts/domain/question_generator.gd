@@ -5,7 +5,7 @@ extends RefCounted
 static func make_question(difficulty: String = "mudah") -> Dictionary:
 	var min_value: int = 0
 	var max_value: int = 10
-	var reward: int = 50
+	var reward: int = 25
 	var difficulty_label: String = "Mudah"
 
 	# Rentang dibuat bertahap untuk anak SD. Angka pada tiap operasi
@@ -14,12 +14,12 @@ static func make_question(difficulty: String = "mudah") -> Dictionary:
 		"sedang", "medium":
 			min_value = 5
 			max_value = 15
-			reward = 60
+			reward = 35
 			difficulty_label = "Sedang"
 		"sulit", "hard":
 			min_value = 20
 			max_value = 50
-			reward = 75
+			reward = 45
 			difficulty_label = "Sulit"
 		_:
 			min_value = 0

@@ -6,7 +6,7 @@ const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
 const WAVE_COUNTS: Array[int] = [4, 5, 6]
 const GUARDIAN_COSTS: Dictionary = {"Plusy": 35, "Addy Cannon": 70, "Shield Cube": 50, "Multiply Dragon": 95, "Fraction Fairy": 85, "Number Knight": 85}
 
-var energy: int = 220
+var energy: int = 180
 var core_hp: int = 120
 var combo: int = 0
 var score: int = 0
@@ -20,6 +20,7 @@ var spawned_this_wave: int = 0
 var spawn_target: int = 0
 var spawn_timer: float = 0.0
 var passive_energy_timer: float = 0.0
+var question_cooldown_timer: float = 0.0
 var intermission_timer: float = 0.0
 var next_enemy_id: int = 1
 var last_spawned_lane: int = -1
@@ -69,24 +70,21 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_update_wave_banner(delta)
 
-	# Setiap wave dimulai dengan satu soal singkat. Soal baru muncul setelah
-	# banner wave selesai agar tidak menutupi pesan pergantian wave.
-	if wave_question_pending and not battle_finished and not paused:
-		var banner_is_visible: bool = is_instance_valid(wave_banner) and wave_banner.visible
-		if not banner_is_visible:
-			wave_question_pending = false
-			_open_question_popup(true)
-
+	# Soal tidak muncul otomatis setelah banner. Pemain membuka soal sendiri
+	# lewat tombol energi ketika merasa membutuhkan tambahan energi.
 	if battle_finished or paused:
 		return
 
-	# Regenerasi energi kecil membantu anak tetap bisa mencoba strategi baru.
+	if question_cooldown_timer > 0.0:
+		question_cooldown_timer = maxf(0.0, question_cooldown_timer - delta)
+
+	# Regenerasi pasif dibuat kecil agar keputusan penempatan Guardian tetap penting.
 	passive_energy_timer += delta
-	if passive_energy_timer >= 7.0:
-		passive_energy_timer -= 7.0
-		energy = mini(999, energy + 5)
+	if passive_energy_timer >= 12.0:
+		passive_energy_timer -= 12.0
+		energy = mini(999, energy + 3)
 		if is_instance_valid(arena):
-			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 44.0), Color("#a6e6b8"), "+5 ENERGI")
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 44.0), Color("#a6e6b8"), "+3 ENERGI")
 
 	if spawned_this_wave < spawn_target:
 		spawn_timer += delta
@@ -152,7 +150,7 @@ func _build_ui() -> void:
 
 	energy_button = _make_button("✦ %d" % energy, Vector2(energy_width, 72), true)
 	energy_button.add_theme_font_size_override("font_size", 21)
-	energy_button.tooltip_text = "Ketuk untuk soal matematika dan energi"
+	energy_button.tooltip_text = "Buka soal matematika secara manual untuk mendapat energi"
 	energy_button.pressed.connect(_open_question_popup)
 	header.add_child(energy_button)
 
@@ -421,19 +419,15 @@ func _difficulty_for_wave() -> String:
 func _open_question_popup(is_wave_challenge: bool = false) -> void:
 	if battle_finished or paused or question_popup_open:
 		return
+	if question_cooldown_timer > 0.0:
+		feedback_label.text = "Soal berikutnya tersedia dalam %d detik." % ceili(question_cooldown_timer)
+		feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
+		return
 
-	# Jika pemain membuka tombol energi saat banner wave masih terlihat,
-	# pertanyaan ini menggantikan tantangan otomatis agar tidak muncul dua kali.
-	if wave_question_pending:
-		is_wave_challenge = true
-		wave_question_pending = false
-	elif not is_wave_challenge:
-		# Soal bonus dapat dibuka berulang kali. Anak tidak perlu menunggu wave
-		# berikutnya untuk mengumpulkan energi; setiap percobaan tetap mengajarkan
-		# operasi matematika dan gameplay dijeda selama menjawab.
-		bonus_question_used_this_wave = true
-
-	question_is_wave_challenge = is_wave_challenge
+	# Soal hanya muncul jika pemain menekan tombol energi. Jeda 18 detik
+	# setelah membuka soal membantu mencegah energi bisa di-farm terlalu cepat.
+	question_cooldown_timer = 18.0
+	question_is_wave_challenge = false
 	_new_question()
 	question_popup_open = true
 	question_result_showing = false
@@ -463,7 +457,7 @@ func _new_question() -> void:
 		else:
 			math_heading.text = "SOAL BONUS • WAVE %d" % current_wave
 	if is_instance_valid(reward_hint_label):
-		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +25" % int(current_question["reward"])
+		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +3" % int(current_question["reward"])
 	var options: Array = current_question["options"]
 	for index in range(answer_buttons.size()):
 		answer_buttons[index].text = str(options[index])
@@ -498,7 +492,7 @@ func _on_answer_pressed(index: int) -> void:
 		correct_answers += 1
 		combo += 1
 		var reward: int = int(current_question["reward"])
-		var combo_bonus: int = 10 if combo % 3 == 0 else 0
+		var combo_bonus: int = 5 if combo % 3 == 0 else 0
 		var total_reward: int = reward + combo_bonus
 		energy = mini(999, energy + total_reward)
 		score += 100 + total_reward
@@ -514,13 +508,13 @@ func _on_answer_pressed(index: int) -> void:
 	else:
 		wrong_answers += 1
 		combo = 0
-		energy = mini(999, energy + 25)
-		feedback_label.text = "%s = %d  •  +25 energi" % [question_text, correct]
+		energy = mini(999, energy + 3)
+		feedback_label.text = "%s = %d  •  +3 energi" % [question_text, correct]
 		feedback_label.add_theme_color_override("font_color", Color("#b95c49"))
 		if is_instance_valid(math_heading):
 			math_heading.text = "AYO BELAJAR BERSAMA!"
 		if is_instance_valid(reward_hint_label):
-			reward_hint_label.text = "Tetap dapat +25 energi • lanjut mencoba!"
+			reward_hint_label.text = "Tetap dapat +3 energi • lanjut mencoba!"
 		if is_instance_valid(arena):
 			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %d" % correct)
 
@@ -616,7 +610,7 @@ func _start_next_wave() -> void:
 	spawn_target = WAVE_COUNTS[current_wave - 1]
 	spawn_timer = 0.0
 	intermission_timer = 0.0
-	wave_question_pending = true
+	wave_question_pending = false
 	bonus_question_used_this_wave = false
 	feedback_label.text = ""
 	_show_wave_banner(current_wave)
@@ -707,11 +701,11 @@ func _update_guardians(delta: float) -> void:
 		guardian["hurt_anim"] = maxf(0.0, float(guardian.get("hurt_anim", 0.0)) - delta)
 		if guardian_type == "Plusy":
 			guardian["energy_timer"] = float(guardian.get("energy_timer", 0.0)) + delta
-			if float(guardian["energy_timer"]) >= 4.5:
-				guardian["energy_timer"] = float(guardian["energy_timer"]) - 4.5
-				energy = mini(999, energy + 8)
+			if float(guardian["energy_timer"]) >= 7.5:
+				guardian["energy_timer"] = float(guardian["energy_timer"]) - 7.5
+				energy = mini(999, energy + 5)
 				if is_instance_valid(arena):
-					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+8")
+					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+5")
 		elif guardian_type == "Addy Cannon" or guardian_type == "Multiply Dragon":
 			guardian["cooldown"] = float(guardian.get("cooldown", 0.0)) - delta
 			if float(guardian["cooldown"]) <= 0.0:
@@ -944,7 +938,10 @@ func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):
 		energy_button.text = "✦ %d" % energy
 		energy_button.disabled = paused or battle_finished
-		energy_button.tooltip_text = "Ketuk untuk menjawab soal dan mendapatkan energi tambahan"
+		if question_cooldown_timer > 0.0:
+			energy_button.tooltip_text = "Soal tersedia dalam %d detik" % ceili(question_cooldown_timer)
+		else:
+			energy_button.tooltip_text = "Ketuk untuk membuka soal matematika dan mendapat energi"
 	if is_instance_valid(core_label):
 		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):
