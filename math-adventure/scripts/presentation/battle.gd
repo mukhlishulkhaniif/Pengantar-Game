@@ -3,9 +3,16 @@ extends Control
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
-const WAVE_COUNTS: Array[int] = [4, 5, 6]
 const GUARDIAN_COSTS: Dictionary = {"Plusy": 35, "Addy Cannon": 70, "Shield Cube": 50, "Multiply Dragon": 95, "Fraction Fairy": 85, "Number Knight": 85}
 const QUESTION_COOLDOWN_SECONDS: float = 18.0
+const TUTORIAL_PAGES = [
+	{"title": "SELAMAT DATANG!", "body": "Tugasmu melindungi Core Numeria di sisi kiri arena. Jika HP Core habis, level berakhir."},
+	{"title": "1. PILIH GUARDIAN", "body": "Pilih kartu Guardian di bagian atas. Angka pada kartu adalah biaya energinya. Jika kartu meredup, tunggu bar cooldown terisi sebelum memakainya lagi."},
+	{"title": "2. TEMPATKAN DI GRID", "body": "Ketuk kartu Guardian, lalu ketuk petak kosong. Addy dan Dragon menyerang, Shield menahan monster, sementara Guardian lain memberi bantuan berbeda."},
+	{"title": "3. KUMPULKAN ENERGI", "body": "Ketuk tombol energi ✦ untuk menjawab soal matematika. Jawaban benar memberi energi; Plusy juga menghasilkan energi."},
+	{"title": "4. JAGA SEMUA BARIS", "body": "Monster datang dari sisi kanan dan bisa muncul di baris mana pun. Perhatikan semua jalur dan lindungi Core."},
+	{"title": "SIAP BERTARUNG?", "body": "Selesaikan semua wave. Gunakan tombol jeda kapan saja, dan coba susun Guardian dengan strategi yang berbeda."}
+]
 const GUARDIAN_PLACEMENT_COOLDOWNS: Dictionary = {
 	"Plusy": 5.0,
 	"Addy Cannon": 7.0,
@@ -24,6 +31,8 @@ var total_questions: int = 0
 var correct_answers: int = 0
 var wrong_answers: int = 0
 var answer_history: Array[Dictionary] = []
+var active_level_data: Dictionary = {}
+var active_wave_counts: Array = [4, 5, 6]
 var current_wave: int = 0
 var spawned_this_wave: int = 0
 var spawn_target: int = 0
@@ -72,6 +81,12 @@ var answer_buttons: Array[Button] = []
 var wave_segments: Array[PanelContainer] = []
 var wave_banner: Control
 var wave_banner_timer: float = 0.0
+var tutorial_overlay: Control
+var tutorial_step_label: Label
+var tutorial_title_label: Label
+var tutorial_body_label: Label
+var tutorial_next_button: Button
+var tutorial_step_index: int = 0
 var last_wave_segment_state: int = -1
 var question_popup: Control
 var question_popup_open: bool = false
@@ -84,8 +99,14 @@ var guardian_button_types: Array[String] = ["Plusy", "Addy Cannon", "Shield Cube
 
 func _ready() -> void:
 	randomize()
+	active_level_data = LevelProgress.get_level_data(LevelProgress.selected_level_id)
+	active_wave_counts = active_level_data.get("wave_enemy_counts", [4, 5, 6])
 	_build_ui()
-	_start_next_wave()
+	if LevelProgress.selected_level_id == 1:
+		paused = true
+		_show_tutorial_overlay()
+	else:
+		_start_next_wave()
 	_refresh_hud()
 
 func _process(delta: float) -> void:
@@ -133,7 +154,7 @@ func _process(delta: float) -> void:
 		return
 
 	if spawned_this_wave >= spawn_target and enemies.is_empty() and projectiles.is_empty():
-		if current_wave < WAVE_COUNTS.size():
+		if current_wave < active_wave_counts.size():
 			intermission_timer += delta
 			if intermission_timer >= 3.2:
 				_start_next_wave()
@@ -216,6 +237,70 @@ func _update_cooldown_visuals() -> void:
 			guardian_cooldown_bars[index].visible = cooling
 			var elapsed: float = cooldown_max - remaining
 			guardian_cooldown_bars[index].value = clampf(elapsed / maxf(cooldown_max, 0.001) * 100.0, 0.0, 100.0)
+
+func _show_tutorial_overlay() -> void:
+	tutorial_step_index = 0
+	tutorial_overlay = Control.new()
+	tutorial_overlay.name = "TutorialOverlay"
+	tutorial_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tutorial_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(tutorial_overlay)
+
+	var shade := ColorRect.new()
+	shade.color = Color(0.035, 0.045, 0.03, 0.88)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	tutorial_overlay.add_child(shade)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	tutorial_overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(minf(520.0, maxf(300.0, get_viewport_rect().size.x - 32.0)), 0)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("#eee2c4"), Color("#171a13"), 5, 22))
+	center.add_child(panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 12)
+	panel.add_child(content)
+
+	tutorial_step_label = _make_label("1 / %d" % TUTORIAL_PAGES.size(), 12, Color("#8b6c2d"), HORIZONTAL_ALIGNMENT_CENTER)
+	content.add_child(tutorial_step_label)
+	tutorial_title_label = _make_label("SELAMAT DATANG!", 24, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER)
+	tutorial_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(tutorial_title_label)
+	tutorial_body_label = _make_label("", 16, Color("#4c4b38"), HORIZONTAL_ALIGNMENT_CENTER)
+	tutorial_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tutorial_body_label.custom_minimum_size = Vector2(0, 100)
+	content.add_child(tutorial_body_label)
+
+	tutorial_next_button = _make_button("SELANJUTNYA  →", Vector2(0, 48), true)
+	tutorial_next_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tutorial_next_button.pressed.connect(_advance_tutorial_step)
+	content.add_child(tutorial_next_button)
+	_update_tutorial_page()
+
+func _update_tutorial_page() -> void:
+	if not is_instance_valid(tutorial_overlay):
+		return
+	var page: Dictionary = TUTORIAL_PAGES[tutorial_step_index]
+	tutorial_step_label.text = "%d / %d" % [tutorial_step_index + 1, TUTORIAL_PAGES.size()]
+	tutorial_title_label.text = str(page.get("title", "TUTORIAL"))
+	tutorial_body_label.text = str(page.get("body", ""))
+	tutorial_next_button.text = "MULAI BERMAIN" if tutorial_step_index == TUTORIAL_PAGES.size() - 1 else "SELANJUTNYA  →"
+
+func _advance_tutorial_step() -> void:
+	if tutorial_step_index < TUTORIAL_PAGES.size() - 1:
+		tutorial_step_index += 1
+		_update_tutorial_page()
+		return
+	if is_instance_valid(tutorial_overlay):
+		tutorial_overlay.queue_free()
+	tutorial_overlay = null
+	paused = false
+	_start_next_wave()
+	_refresh_hud()
 
 func _build_ui() -> void:
 	# UI berpalet vintage: kertas krem, tinta gelap, hijau hutan, dan emas antik.
@@ -314,7 +399,7 @@ func _build_ui() -> void:
 	wave_track.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.add_child(wave_track)
 	wave_segments.clear()
-	for i in range(3):
+	for i in range(active_wave_counts.size()):
 		var segment := PanelContainer.new()
 		segment.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		segment.custom_minimum_size = Vector2(0, 7)
@@ -524,10 +609,10 @@ func _end_drag(position: Vector2) -> void:
 
 
 func _difficulty_for_wave() -> String:
-	# Untuk anak SD, dua wave pertama memakai soal mudah; wave terakhir sedang.
-	if current_wave <= 2:
-		return "mudah"
-	return "sedang"
+	var base_difficulty: String = str(active_level_data.get("difficulty", "mudah"))
+	if current_wave >= active_wave_counts.size() and str(active_level_data.get("tier", "")) in ["Advanced", "Boss"]:
+		return "sulit"
+	return base_difficulty
 
 func _open_question_popup(is_wave_challenge: bool = false) -> void:
 	if battle_finished or paused or question_popup_open:
@@ -562,8 +647,8 @@ func _close_question_popup() -> void:
 	_refresh_hud()
 
 func _new_question() -> void:
-	current_question = QuestionGenerator.make_question(_difficulty_for_wave())
-	question_label.text = "%d %s %d = ?" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
+	current_question = QuestionGenerator.make_question(_difficulty_for_wave(), int(active_level_data.get("world_id", 1)))
+	question_label.text = "%s = ?" % str(current_question.get("question", "5 + 3"))
 	if is_instance_valid(math_heading):
 		if question_is_wave_challenge:
 			math_heading.text = "TANTANGAN WAVE %d" % current_wave
@@ -588,20 +673,21 @@ func _on_answer_pressed(index: int) -> void:
 	for button in answer_buttons:
 		button.disabled = true
 
-	var chosen: int = int(options[index])
-	var correct: int = int(current_question["answer"])
-	var question_text: String = "%d %s %d" % [int(current_question["a"]), str(current_question["operator"]), int(current_question["b"])]
+	var chosen: String = str(options[index])
+	var correct: String = str(current_question.get("answer", "0"))
+	var question_text: String = str(current_question.get("question", ""))
+	var is_correct: bool = chosen == correct
 	total_questions += 1
 	answer_history.append({
 		"question": question_text,
 		"chosen": chosen,
 		"answer": correct,
-		"correct": chosen == correct
+		"correct": is_correct
 	})
 
 	# Tampilkan pembahasan sebentar sebelum gameplay dilanjutkan.
-	question_label.text = "%s = %d" % [question_text, correct]
-	if chosen == correct:
+	question_label.text = "%s = %s" % [question_text, correct]
+	if is_correct:
 		correct_answers += 1
 		combo += 1
 		var reward: int = int(current_question["reward"])
@@ -622,14 +708,14 @@ func _on_answer_pressed(index: int) -> void:
 		wrong_answers += 1
 		combo = 0
 		energy = mini(999, energy + 3)
-		feedback_label.text = "%s = %d  •  +3 energi" % [question_text, correct]
+		feedback_label.text = "%s = %s  •  +3 energi" % [question_text, correct]
 		feedback_label.add_theme_color_override("font_color", Color("#b95c49"))
 		if is_instance_valid(math_heading):
 			math_heading.text = "AYO BELAJAR BERSAMA!"
 		if is_instance_valid(reward_hint_label):
 			reward_hint_label.text = "Tetap dapat +3 energi • lanjut mencoba!"
 		if is_instance_valid(arena):
-			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %d" % correct)
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %s" % correct)
 
 	_refresh_hud()
 	await get_tree().create_timer(1.15).timeout
@@ -731,7 +817,7 @@ func _start_next_wave() -> void:
 		score += 50
 	current_wave += 1
 	spawned_this_wave = 0
-	spawn_target = WAVE_COUNTS[current_wave - 1]
+	spawn_target = int(active_wave_counts[current_wave - 1])
 	spawn_timer = 0.0
 	intermission_timer = 0.0
 	wave_question_pending = false
@@ -745,15 +831,9 @@ func _show_wave_banner(wave_number: int) -> void:
 	var title: Label = wave_banner.find_child("BannerTitle", true, false) as Label
 	var subtitle: Label = wave_banner.find_child("BannerSubtitle", true, false) as Label
 	if is_instance_valid(title):
-		title.text = "WAVE %d" % wave_number
+		title.text = "LEVEL %02d  •  WAVE %d" % [LevelProgress.selected_level_id, wave_number]
 	if is_instance_valid(subtitle):
-		match wave_number:
-			1:
-				subtitle.text = "MUSUH BISA DATANG DARI MANA SAJA"
-			2:
-				subtitle.text = "PERIKSA SEMUA JALUR"
-			_:
-				subtitle.text = "WASPADAI SETIAP BARIS"
+		subtitle.text = "%s  •  %s" % [str(active_level_data.get("world_name", "Numeria")), str(active_level_data.get("tier", "Tutorial")).to_upper()]
 	wave_banner.modulate.a = 1.0
 	wave_banner.visible = true
 	wave_banner_timer = 1.45
@@ -769,25 +849,37 @@ func _update_wave_banner(delta: float) -> void:
 		wave_banner.modulate.a = clampf(wave_banner_timer / 0.28, 0.0, 1.0)
 
 func _spawn_enemy() -> void:
+	var world_id: int = maxi(1, int(active_level_data.get("world_id", 1)))
 	var enemy_type: String = "Error Blob"
-	# Hanya ada satu musuh khusus pada wave terakhir; dua wave awal fokus belajar dasar.
-	if current_wave >= 3:
-		if spawned_this_wave == 3:
+	# Komposisi musuh meningkat per dunia; boss-level memakai lebih banyak musuh spesial.
+	if world_id == 1:
+		if current_wave >= 3 and spawned_this_wave == 3:
 			enemy_type = "Calculator Bug"
-		elif spawned_this_wave == 4:
+		elif current_wave >= 3 and spawned_this_wave == 4:
 			enemy_type = "Minus Monster"
+	elif world_id == 2:
+		if spawned_this_wave % 3 == 2:
+			enemy_type = "Calculator Bug"
+		if current_wave == active_wave_counts.size() and spawned_this_wave == spawn_target - 1:
+			enemy_type = "Minus Monster"
+	else:
+		if spawned_this_wave % 2 == 0:
+			enemy_type = "Minus Monster"
+		elif spawned_this_wave % 3 == 0:
+			enemy_type = "Calculator Bug"
 
-	# HP meningkat secara bertahap setiap wave supaya monster lebih tangguh,
-	# tanpa mempercepat gerakannya. Monster spesial tetap punya karakter sendiri.
-	var hp: int = 90 + (current_wave - 1) * 15
+	# HP bertambah berdasarkan wave, level, dan dunia; kecepatan tetap mengikuti pacing v2.5.
+	var local_level: int = int(active_level_data.get("local_level", 1))
+	var level_scale: float = 1.0 + float(local_level - 1) * 0.025 + float(world_id - 1) * 0.15
+	var hp: int = roundi((90.0 + float(current_wave - 1) * 15.0) * level_scale)
 	var speed: float = 9.5
 	var core_damage: int = 6
 	if enemy_type == "Minus Monster":
-		hp = 150
+		hp = roundi(150.0 * level_scale)
 		speed = 8.0
 		core_damage = 6
 	elif enemy_type == "Calculator Bug":
-		hp = 125
+		hp = roundi(125.0 * level_scale)
 		speed = 12.0
 		core_damage = 5
 
@@ -1066,7 +1158,10 @@ func _refresh_hud() -> void:
 	if is_instance_valid(core_label):
 		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):
-		wave_label.text = "WAVE %d" % max(current_wave, 1)
+		if LevelProgress.selected_level_id == 1 and current_wave == 0:
+			wave_label.text = "TUTORIAL"
+		else:
+			wave_label.text = "L%02d • WAVE %d" % [LevelProgress.selected_level_id, max(current_wave, 1)]
 	if is_instance_valid(score_label):
 		score_label.text = "SKOR %d" % score
 	if is_instance_valid(core_bar):
@@ -1149,6 +1244,16 @@ func _finish_battle(victory: bool) -> void:
 	question_popup_open = false
 	question_result_showing = false
 	wave_question_pending = false
+	var completed_level_id: int = LevelProgress.selected_level_id
+	var earned_stars: int = 0
+	var final_accuracy: int = roundi(float(correct_answers) / float(maxi(total_questions, 1)) * 100.0)
+	if victory:
+		earned_stars = 1
+		if core_hp >= 60:
+			earned_stars = 2
+		if core_hp >= 90 and total_questions > 0 and final_accuracy >= 75:
+			earned_stars = 3
+		LevelProgress.complete_level(completed_level_id, earned_stars)
 	if is_instance_valid(question_popup):
 		question_popup.visible = false
 	selected_guardian = ""
@@ -1177,8 +1282,10 @@ func _finish_battle(victory: bool) -> void:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 11)
 	panel.add_child(content)
-	var title_text: String = "NUMERIA SELAMAT!" if victory else "CORE NUMERIA RUNTUH"
-	var detail_text: String = "Hebat! Kamu berhasil melewati semua wave." if victory else "Coba susun Guardian pada jalur yang berbeda dan jawab soal untuk memperoleh energi."
+	var title_text: String = ("LEVEL SELESAI!  %s" % "★".repeat(earned_stars)) if victory else "CORE NUMERIA RUNTUH"
+	var level_name: String = str(active_level_data.get("world_name", "Numeria"))
+	var tier_name: String = str(active_level_data.get("name", "Level"))
+	var detail_text: String = ("%s • %s\n%s" % [level_name, tier_name, "Semua level selesai! Kamu hebat!" if completed_level_id >= LevelProgress.TOTAL_LEVELS else "Hebat! Level berikutnya terbuka."]) if victory else "Coba susun Guardian pada jalur yang berbeda dan jawab soal untuk memperoleh energi."
 	var title := _make_label(title_text, 26, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER)
 	content.add_child(title)
 	var detail := _make_label(detail_text, 14, Color("#4c4b38"), HORIZONTAL_ALIGNMENT_CENTER)
@@ -1201,7 +1308,15 @@ func _finish_battle(victory: bool) -> void:
 		review_label.visible = not review_label.visible
 		review_button.text = "SEMBUNYIKAN PEMBAHASAN" if review_label.visible else "LIHAT PEMBAHASAN SOAL"
 	)
-	var replay := _make_button("MAIN LAGI", Vector2(0, 48), true)
+	if victory and completed_level_id < LevelProgress.TOTAL_LEVELS:
+		var next_level_button := _make_button("LEVEL BERIKUTNYA  →", Vector2(0, 48), true)
+		next_level_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		next_level_button.pressed.connect(func() -> void:
+			if LevelProgress.select_level(completed_level_id + 1):
+				get_tree().change_scene_to_file("res://scenes/battle.tscn")
+		)
+		content.add_child(next_level_button)
+	var replay := _make_button("MAIN LAGI", Vector2(0, 48), false if victory else true)
 	replay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	replay.pressed.connect(func() -> void: get_tree().reload_current_scene())
 	content.add_child(replay)
