@@ -3,10 +3,10 @@ extends Control
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
-const WAVE_COUNTS: Array[int] = [4, 5, 6]
-const GUARDIAN_COSTS: Dictionary = {"Plusy": 50, "Addy Cannon": 100, "Shield Cube": 75, "Multiply Dragon": 140, "Fraction Fairy": 125, "Number Knight": 125}
+const WAVE_COUNTS: Array[int] = [3, 4, 5]
+const GUARDIAN_COSTS: Dictionary = {"Plusy": 35, "Addy Cannon": 70, "Shield Cube": 50, "Multiply Dragon": 95, "Fraction Fairy": 85, "Number Knight": 85}
 
-var energy: int = 150
+var energy: int = 220
 var core_hp: int = 120
 var combo: int = 0
 var score: int = 0
@@ -19,6 +19,7 @@ var current_wave: int = 0
 var spawned_this_wave: int = 0
 var spawn_target: int = 0
 var spawn_timer: float = 0.0
+var passive_energy_timer: float = 0.0
 var intermission_timer: float = 0.0
 var next_enemy_id: int = 1
 var battle_finished: bool = false
@@ -78,9 +79,17 @@ func _process(delta: float) -> void:
 	if battle_finished or paused:
 		return
 
+	# Regenerasi energi kecil membantu anak tetap bisa mencoba strategi baru.
+	passive_energy_timer += delta
+	if passive_energy_timer >= 7.0:
+		passive_energy_timer -= 7.0
+		energy = mini(999, energy + 5)
+		if is_instance_valid(arena):
+			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 44.0), Color("#a6e6b8"), "+5 ENERGI")
+
 	if spawned_this_wave < spawn_target:
 		spawn_timer += delta
-		var spawn_interval: float = maxf(2.0, 2.65 - float(current_wave - 1) * 0.25)
+		var spawn_interval: float = maxf(3.4, 4.2 - float(current_wave - 1) * 0.3)
 		if spawn_timer >= spawn_interval:
 			spawn_timer = 0.0
 			_spawn_enemy()
@@ -151,12 +160,12 @@ func _build_ui() -> void:
 
 	guardian_button_types = ["Plusy", "Addy Cannon", "Shield Cube", "Multiply Dragon", "Fraction Fairy", "Number Knight"]
 	var card_titles: Dictionary = {
-		"Plusy": "PLUSY\n50",
-		"Addy Cannon": "ADDY\n100",
-		"Shield Cube": "SHIELD\n75",
-		"Multiply Dragon": "DRAGON\n140",
-		"Fraction Fairy": "FAIRY\n125",
-		"Number Knight": "KNIGHT\n125"
+		"Plusy": "PLUSY\n35",
+		"Addy Cannon": "ADDY\n70",
+		"Shield Cube": "SHIELD\n50",
+		"Multiply Dragon": "DRAGON\n95",
+		"Fraction Fairy": "FAIRY\n85",
+		"Number Knight": "KNIGHT\n85"
 	}
 	for guardian_type in guardian_button_types:
 		var guardian_button := _make_button(str(card_titles[guardian_type]), Vector2(card_width, 72), false)
@@ -255,7 +264,7 @@ func _build_ui() -> void:
 	arena.slot_clicked.connect(_on_slot_clicked)
 	arena_panel.add_child(arena)
 
-	# Tantangan matematika muncul hanya ketika pemain mengetuk tombol energi.
+	# Tantangan matematika muncul saat pergantian wave atau ketika pemain mengetuk tombol energi.
 	question_popup = Control.new()
 	question_popup.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	question_popup.visible = false
@@ -286,7 +295,7 @@ func _build_ui() -> void:
 	question_label = _make_label("12 + 8 = ?", 31, Color("#171a13"), HORIZONTAL_ALIGNMENT_CENTER)
 	question_label.custom_minimum_size = Vector2(0, 48)
 	popup_content.add_child(question_label)
-	reward_hint_label = _make_label("BENAR +ENERGI  •  SALAH +10", 10, Color("#66583f"), HORIZONTAL_ALIGNMENT_CENTER)
+	reward_hint_label = _make_label("BENAR +ENERGI  •  SALAH +15", 10, Color("#66583f"), HORIZONTAL_ALIGNMENT_CENTER)
 	popup_content.add_child(reward_hint_label)
 
 	# Dua kolom memberi target sentuh lebih besar pada layar HP.
@@ -417,10 +426,9 @@ func _open_question_popup(is_wave_challenge: bool = false) -> void:
 		is_wave_challenge = true
 		wave_question_pending = false
 	elif not is_wave_challenge:
-		if bonus_question_used_this_wave:
-			feedback_label.text = "Soal bonus sudah dipakai pada wave ini."
-			feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
-			return
+		# Soal bonus dapat dibuka berulang kali. Anak tidak perlu menunggu wave
+		# berikutnya untuk mengumpulkan energi; setiap percobaan tetap mengajarkan
+		# operasi matematika dan gameplay dijeda selama menjawab.
 		bonus_question_used_this_wave = true
 
 	question_is_wave_challenge = is_wave_challenge
@@ -440,7 +448,7 @@ func _close_question_popup() -> void:
 	question_is_wave_challenge = false
 	paused = false
 	question_popup.visible = false
-	feedback_label.text = "Soal dilewati • tanpa bonus tambahan"
+	feedback_label.text = "Soal dilewati • permainan tetap lanjut"
 	feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
 	_refresh_hud()
 
@@ -453,7 +461,7 @@ func _new_question() -> void:
 		else:
 			math_heading.text = "SOAL BONUS • WAVE %d" % current_wave
 	if is_instance_valid(reward_hint_label):
-		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +10" % int(current_question["reward"])
+		reward_hint_label.text = "BENAR +%d ENERGI  •  SALAH +25" % int(current_question["reward"])
 	var options: Array = current_question["options"]
 	for index in range(answer_buttons.size()):
 		answer_buttons[index].text = str(options[index])
@@ -504,13 +512,13 @@ func _on_answer_pressed(index: int) -> void:
 	else:
 		wrong_answers += 1
 		combo = 0
-		energy = mini(999, energy + 10)
-		feedback_label.text = "%s = %d  •  +10 energi" % [question_text, correct]
+		energy = mini(999, energy + 25)
+		feedback_label.text = "%s = %d  •  +25 energi" % [question_text, correct]
 		feedback_label.add_theme_color_override("font_color", Color("#b95c49"))
 		if is_instance_valid(math_heading):
-			math_heading.text = "BELUM TEPAT — COBA LAGI"
+			math_heading.text = "AYO BELAJAR BERSAMA!"
 		if is_instance_valid(reward_hint_label):
-			reward_hint_label.text = "Jawaban benar • +10 energi tetap diberikan"
+			reward_hint_label.text = "Tetap dapat +25 energi • lanjut mencoba!"
 		if is_instance_valid(arena):
 			arena.add_visual_effect("reward", Vector2(arena.size.x * 0.5, 34.0), Color("#b95c49"), "JAWABAN %d" % correct)
 
@@ -619,7 +627,13 @@ func _show_wave_banner(wave_number: int) -> void:
 	if is_instance_valid(title):
 		title.text = "WAVE %d" % wave_number
 	if is_instance_valid(subtitle):
-		subtitle.text = "MULAI BERTAHAN" if wave_number == 1 else "WAVE BERIKUTNYA"
+		match wave_number:
+			1:
+				subtitle.text = "JALUR TENGAH SAJA"
+			2:
+				subtitle.text = "TENGAH & JALUR SAMPING"
+			_:
+				subtitle.text = "SEMUA JALUR • BERSIAP"
 	wave_banner.modulate.a = 1.0
 	wave_banner.visible = true
 	wave_banner_timer = 1.45
@@ -636,27 +650,26 @@ func _update_wave_banner(delta: float) -> void:
 
 func _spawn_enemy() -> void:
 	var enemy_type: String = "Error Blob"
-	if current_wave == 2 and spawned_this_wave % 3 == 2:
-		enemy_type = "Minus Monster"
-	elif current_wave >= 3:
-		if spawned_this_wave % 4 == 3:
+	# Hanya ada satu musuh khusus pada wave terakhir; dua wave awal fokus belajar dasar.
+	if current_wave >= 3:
+		if spawned_this_wave == 3:
 			enemy_type = "Calculator Bug"
-		elif spawned_this_wave % 3 == 2:
+		elif spawned_this_wave == 4:
 			enemy_type = "Minus Monster"
 
-	var hp: int = 55
-	var speed: float = 22.0
-	var core_damage: int = 12
+	var hp: int = 48
+	var speed: float = 14.0
+	var core_damage: int = 6
 	if enemy_type == "Minus Monster":
-		hp = 90
-		speed = 18.0
-		core_damage = 12
+		hp = 68
+		speed = 11.0
+		core_damage = 6
 	elif enemy_type == "Calculator Bug":
-		hp = 65
-		speed = 31.0
-		core_damage = 10
+		hp = 54
+		speed = 18.0
+		core_damage = 5
 
-	var lane: int = randi_range(0, 4)
+	var lane: int = _choose_enemy_lane()
 	enemies.append({
 		"id": next_enemy_id,
 		"type": enemy_type,
@@ -673,6 +686,18 @@ func _spawn_enemy() -> void:
 	next_enemy_id += 1
 	spawned_this_wave += 1
 
+
+func _choose_enemy_lane() -> int:
+	# Jalur sengaja dibuat berurutan dan dapat diprediksi agar anak bisa belajar strategi.
+	# Indeks baris: 0 paling atas, 2 tengah, 4 paling bawah.
+	if current_wave <= 1:
+		return 2
+	if current_wave == 2:
+		var wave_two_pattern: Array[int] = [2, 1, 2, 3]
+		return wave_two_pattern[mini(spawned_this_wave, wave_two_pattern.size() - 1)]
+	var wave_three_pattern: Array[int] = [2, 1, 3, 0, 4]
+	return wave_three_pattern[mini(spawned_this_wave, wave_three_pattern.size() - 1)]
+
 func _update_guardians(delta: float) -> void:
 	for index in range(guardians.size()):
 		var guardian: Dictionary = guardians[index]
@@ -681,11 +706,11 @@ func _update_guardians(delta: float) -> void:
 		guardian["hurt_anim"] = maxf(0.0, float(guardian.get("hurt_anim", 0.0)) - delta)
 		if guardian_type == "Plusy":
 			guardian["energy_timer"] = float(guardian.get("energy_timer", 0.0)) + delta
-			if float(guardian["energy_timer"]) >= 5.0:
-				guardian["energy_timer"] = float(guardian["energy_timer"]) - 5.0
-				energy = mini(999, energy + 5)
+			if float(guardian["energy_timer"]) >= 4.5:
+				guardian["energy_timer"] = float(guardian["energy_timer"]) - 4.5
+				energy = mini(999, energy + 8)
 				if is_instance_valid(arena):
-					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+5")
+					arena.add_visual_effect("reward", arena.get_guardian_center(guardian), Color("#a6e6b8"), "+8")
 		elif guardian_type == "Addy Cannon" or guardian_type == "Multiply Dragon":
 			guardian["cooldown"] = float(guardian.get("cooldown", 0.0)) - delta
 			if float(guardian["cooldown"]) <= 0.0:
@@ -701,7 +726,7 @@ func _update_guardians(delta: float) -> void:
 						"y": arena.get_lane_center(int(guardian["lane"])) - (10.0 if is_dragon else 7.0),
 						"target_id": int(target["id"]),
 						"speed": 350.0 if is_dragon else 430.0,
-						"damage": 24 if is_dragon else 18,
+						"damage": 20 if is_dragon else 15,
 						"splash_radius": 78.0 if is_dragon else 0.0,
 						"splash_lane_radius": 1 if is_dragon else 0,
 						"target_lane": int(target["lane"])
@@ -830,7 +855,7 @@ func _update_enemies(delta: float) -> void:
 
 			# Number Knight membalas serangan dengan tebasan jarak dekat.
 			if guardian_type == "Number Knight" and float(guardian.get("cooldown", 0.0)) <= 0.0:
-				var knight_damage: int = 26
+				var knight_damage: int = 20
 				enemy["hp"] = int(enemy.get("hp", 0)) - knight_damage
 				enemy["hit_flash"] = 0.16
 				guardian["attack_anim"] = 0.24
@@ -850,14 +875,14 @@ func _update_enemies(delta: float) -> void:
 			enemy["attack_timer"] = float(enemy.get("attack_timer", 0.0)) + delta
 			if float(enemy["attack_timer"]) >= 1.25:
 				enemy["attack_timer"] = float(enemy["attack_timer"]) - 1.25
-				var incoming_damage: int = 8 if guardian_type == "Shield Cube" else 12
+				var incoming_damage: int = 4 if guardian_type == "Shield Cube" else 6
 				guardian["hp"] = int(guardian.get("hp", 180)) - incoming_damage
 				guardian["hurt_anim"] = 0.20
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", arena.get_guardian_center(guardian), Color("#f2b4a8"), "-%d" % incoming_damage)
 				# Shield Cube memantulkan sebagian serangan sebagai duri pelindung.
 				if guardian_type == "Shield Cube":
-					var thorns_damage: int = 6
+					var thorns_damage: int = 4
 					enemy["hp"] = int(enemy.get("hp", 0)) - thorns_damage
 					if is_instance_valid(arena):
 						arena.add_visual_effect("hit", Vector2(float(enemy["x"]), arena.get_lane_center(int(enemy["lane"]))), Color("#f1d990"), "-%d" % thorns_damage)
@@ -885,11 +910,8 @@ func _update_enemies(delta: float) -> void:
 				core_hp -= core_damage_amount
 				if is_instance_valid(arena):
 					arena.add_visual_effect("hit", Vector2(core_line, arena.get_lane_center(int(enemy["lane"]))), Color("#f2b4a8"), "CORE -%d" % core_damage_amount)
-				if str(enemy["type"]) == "Minus Monster":
-					energy = maxi(0, energy - 10)
-					feedback_label.text = "Inti -%d • Energi -10" % core_damage_amount
-				else:
-					feedback_label.text = "Inti terkena serangan"
+				# Musuh yang lolos tidak mengurangi energi; anak cukup belajar dari HP Core.
+				feedback_label.text = "Inti terkena serangan (-%d HP)" % core_damage_amount
 				feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 				enemies.remove_at(index)
 				if core_hp <= 0:
@@ -920,8 +942,8 @@ func _find_blocking_guardian(enemy: Dictionary) -> int:
 func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):
 		energy_button.text = "✦ %d" % energy
-		energy_button.disabled = paused or battle_finished or bonus_question_used_this_wave
-		energy_button.tooltip_text = "Soal bonus sudah dipakai pada wave ini" if bonus_question_used_this_wave else "Jawab satu soal bonus pada wave ini"
+		energy_button.disabled = paused or battle_finished
+		energy_button.tooltip_text = "Ketuk untuk menjawab soal dan mendapatkan energi tambahan"
 	if is_instance_valid(core_label):
 		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):

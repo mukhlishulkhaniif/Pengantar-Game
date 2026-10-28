@@ -5,26 +5,26 @@ extends RefCounted
 static func make_question(difficulty: String = "mudah") -> Dictionary:
 	var min_value: int = 0
 	var max_value: int = 10
-	var reward: int = 30
+	var reward: int = 50
 	var difficulty_label: String = "Mudah"
 
 	# Rentang dibuat bertahap untuk anak SD. Angka pada tiap operasi
 	# dijaga agar tidak terlalu besar dan pengurangan tidak menghasilkan negatif.
 	match difficulty.to_lower():
 		"sedang", "medium":
-			min_value = 10
-			max_value = 30
-			reward = 45
+			min_value = 5
+			max_value = 15
+			reward = 60
 			difficulty_label = "Sedang"
 		"sulit", "hard":
 			min_value = 20
 			max_value = 50
-			reward = 60
+			reward = 75
 			difficulty_label = "Sulit"
 		_:
 			min_value = 0
 			max_value = 10
-			reward = 30
+			reward = 50
 			difficulty_label = "Mudah"
 
 	var a: int = randi_range(min_value, max_value)
