@@ -777,15 +777,17 @@ func _spawn_enemy() -> void:
 		elif spawned_this_wave == 4:
 			enemy_type = "Minus Monster"
 
-	var hp: int = 48
+	# HP meningkat secara bertahap setiap wave supaya monster lebih tangguh,
+	# tanpa mempercepat gerakannya. Monster spesial tetap punya karakter sendiri.
+	var hp: int = 60 + (current_wave - 1) * 8
 	var speed: float = 9.5
 	var core_damage: int = 6
 	if enemy_type == "Minus Monster":
-		hp = 68
+		hp = 92
 		speed = 8.0
 		core_damage = 6
 	elif enemy_type == "Calculator Bug":
-		hp = 54
+		hp = 78
 		speed = 12.0
 		core_damage = 5
 
