@@ -3,7 +3,7 @@ extends Control
 const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
-const WAVE_COUNTS: Array[int] = [3, 4, 5]
+const WAVE_COUNTS: Array[int] = [4, 5, 6]
 const GUARDIAN_COSTS: Dictionary = {"Plusy": 35, "Addy Cannon": 70, "Shield Cube": 50, "Multiply Dragon": 95, "Fraction Fairy": 85, "Number Knight": 85}
 
 var energy: int = 220
@@ -22,6 +22,7 @@ var spawn_timer: float = 0.0
 var passive_energy_timer: float = 0.0
 var intermission_timer: float = 0.0
 var next_enemy_id: int = 1
+var last_spawned_lane: int = -1
 var battle_finished: bool = false
 var paused: bool = false
 var selected_guardian: String = ""
@@ -89,7 +90,8 @@ func _process(delta: float) -> void:
 
 	if spawned_this_wave < spawn_target:
 		spawn_timer += delta
-		var spawn_interval: float = maxf(3.4, 4.2 - float(current_wave - 1) * 0.3)
+		# Ritme lebih lambat: beri waktu untuk membaca soal dan menyusun pertahanan.
+		var spawn_interval: float = maxf(5.5, 6.5 - float(current_wave - 1) * 0.5)
 		if spawn_timer >= spawn_interval:
 			spawn_timer = 0.0
 			_spawn_enemy()
@@ -103,7 +105,7 @@ func _process(delta: float) -> void:
 	if spawned_this_wave >= spawn_target and enemies.is_empty() and projectiles.is_empty():
 		if current_wave < WAVE_COUNTS.size():
 			intermission_timer += delta
-			if intermission_timer >= 2.2:
+			if intermission_timer >= 3.2:
 				_start_next_wave()
 		else:
 			_finish_battle(true)
@@ -629,11 +631,11 @@ func _show_wave_banner(wave_number: int) -> void:
 	if is_instance_valid(subtitle):
 		match wave_number:
 			1:
-				subtitle.text = "JALUR TENGAH SAJA"
+				subtitle.text = "MUSUH BISA DATANG DARI MANA SAJA"
 			2:
-				subtitle.text = "TENGAH & JALUR SAMPING"
+				subtitle.text = "PERIKSA SEMUA JALUR"
 			_:
-				subtitle.text = "SEMUA JALUR • BERSIAP"
+				subtitle.text = "WASPADAI SETIAP BARIS"
 	wave_banner.modulate.a = 1.0
 	wave_banner.visible = true
 	wave_banner_timer = 1.45
@@ -658,15 +660,15 @@ func _spawn_enemy() -> void:
 			enemy_type = "Minus Monster"
 
 	var hp: int = 48
-	var speed: float = 14.0
+	var speed: float = 9.5
 	var core_damage: int = 6
 	if enemy_type == "Minus Monster":
 		hp = 68
-		speed = 11.0
+		speed = 8.0
 		core_damage = 6
 	elif enemy_type == "Calculator Bug":
 		hp = 54
-		speed = 18.0
+		speed = 12.0
 		core_damage = 5
 
 	var lane: int = _choose_enemy_lane()
@@ -688,15 +690,14 @@ func _spawn_enemy() -> void:
 
 
 func _choose_enemy_lane() -> int:
-	# Jalur sengaja dibuat berurutan dan dapat diprediksi agar anak bisa belajar strategi.
-	# Indeks baris: 0 paling atas, 2 tengah, 4 paling bawah.
-	if current_wave <= 1:
-		return 2
-	if current_wave == 2:
-		var wave_two_pattern: Array[int] = [2, 1, 2, 3]
-		return wave_two_pattern[mini(spawned_this_wave, wave_two_pattern.size() - 1)]
-	var wave_three_pattern: Array[int] = [2, 1, 3, 0, 4]
-	return wave_three_pattern[mini(spawned_this_wave, wave_three_pattern.size() - 1)]
+	# Semua wave dapat menyerang kelima baris. Pemilihan acak menjaga strategi
+	# tetap menarik, tetapi baris yang sama tidak dipilih dua kali berturut-turut.
+	var available_lanes: Array[int] = [0, 1, 2, 3, 4]
+	if last_spawned_lane >= 0:
+		available_lanes.erase(last_spawned_lane)
+	var chosen_lane: int = available_lanes[randi_range(0, available_lanes.size() - 1)]
+	last_spawned_lane = chosen_lane
+	return chosen_lane
 
 func _update_guardians(delta: float) -> void:
 	for index in range(guardians.size()):
@@ -726,7 +727,7 @@ func _update_guardians(delta: float) -> void:
 						"y": arena.get_lane_center(int(guardian["lane"])) - (10.0 if is_dragon else 7.0),
 						"target_id": int(target["id"]),
 						"speed": 350.0 if is_dragon else 430.0,
-						"damage": 20 if is_dragon else 15,
+						"damage": 17 if is_dragon else 13,
 						"splash_radius": 78.0 if is_dragon else 0.0,
 						"splash_lane_radius": 1 if is_dragon else 0,
 						"target_lane": int(target["lane"])
@@ -855,7 +856,7 @@ func _update_enemies(delta: float) -> void:
 
 			# Number Knight membalas serangan dengan tebasan jarak dekat.
 			if guardian_type == "Number Knight" and float(guardian.get("cooldown", 0.0)) <= 0.0:
-				var knight_damage: int = 20
+				var knight_damage: int = 17
 				enemy["hp"] = int(enemy.get("hp", 0)) - knight_damage
 				enemy["hit_flash"] = 0.16
 				guardian["attack_anim"] = 0.24
