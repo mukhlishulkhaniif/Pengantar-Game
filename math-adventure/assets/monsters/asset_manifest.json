@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "id": "error_blob",
+      "file": "error_blob.png",
+      "role": "basic_enemy",
+      "canvas": "512x512",
+      "transparent_background": true,
+      "facing": "left"
+    },
+    {
+      "id": "minus_monster",
+      "file": "minus_monster.png",
+      "role": "tank_enemy",
+      "canvas": "512x512",
+      "transparent_background": true,
+      "facing": "left"
+    },
+    {
+      "id": "calculator_bug",
+      "file": "calculator_bug.png",
+      "role": "fast_enemy",
+      "canvas": "512x512",
+      "transparent_background": true,
+      "facing": "left"
+    }
+  ]
+}

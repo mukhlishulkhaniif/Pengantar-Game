@@ -779,15 +779,15 @@ func _spawn_enemy() -> void:
 
 	# HP meningkat secara bertahap setiap wave supaya monster lebih tangguh,
 	# tanpa mempercepat gerakannya. Monster spesial tetap punya karakter sendiri.
-	var hp: int = 60 + (current_wave - 1) * 8
+	var hp: int = 90 + (current_wave - 1) * 15
 	var speed: float = 9.5
 	var core_damage: int = 6
 	if enemy_type == "Minus Monster":
-		hp = 92
+		hp = 150
 		speed = 8.0
 		core_damage = 6
 	elif enemy_type == "Calculator Bug":
-		hp = 78
+		hp = 125
 		speed = 12.0
 		core_damage = 5
 
@@ -846,7 +846,7 @@ func _update_guardians(delta: float) -> void:
 						"x": guardian_center.x + 20.0,
 						"y": arena.get_lane_center(int(guardian["lane"])) - (10.0 if is_dragon else 7.0),
 						"target_id": int(target["id"]),
-						"speed": 350.0 if is_dragon else 430.0,
+						"speed": 240.0 if is_dragon else 280.0,
 						"damage": 17 if is_dragon else 13,
 						"splash_radius": 78.0 if is_dragon else 0.0,
 						"splash_lane_radius": 1 if is_dragon else 0,

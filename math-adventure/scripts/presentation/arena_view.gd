@@ -22,9 +22,14 @@ const GUARDIAN_TEXTURE_PATHS: Dictionary = {
 	"Number Knight": "res://assets/characters/number_knight.png"
 }
 const ENEMY_TEXTURE_PATHS: Dictionary = {
-	"Error Blob": "res://assets/characters/error_blob.png",
-	"Minus Monster": "res://assets/characters/minus_monster.png",
-	"Calculator Bug": "res://assets/characters/calculator_bug.png"
+	"Error Blob": "res://assets/monsters/error_blob.png",
+	"Minus Monster": "res://assets/monsters/minus_monster.png",
+	"Calculator Bug": "res://assets/monsters/calculator_bug.png"
+}
+const ENEMY_SPRITE_MAX_SIZES: Dictionary = {
+	"Error Blob": Vector2(68.0, 66.0),
+	"Minus Monster": Vector2(74.0, 72.0),
+	"Calculator Bug": Vector2(68.0, 62.0)
 }
 
 var guardians: Array = []
@@ -63,6 +68,11 @@ func _load_optional_art_assets() -> void:
 			var enemy_texture := load(enemy_path) as Texture2D
 			if enemy_texture != null:
 				enemy_textures[enemy_type] = enemy_texture
+			else:
+				push_warning("PNG monster tidak dapat dimuat: " + enemy_path)
+		else:
+			# Tidak fatal: monster tetap memakai fallback prosedural sampai PNG ditambahkan.
+			print("Aset monster belum tersedia, memakai fallback: ", enemy_path)
 
 func _process(delta: float) -> void:
 	visual_time += delta
@@ -478,9 +488,15 @@ func _draw_enemy(enemy: Dictionary) -> void:
 	draw_set_transform(world_center + Vector2(0.0, -2.0), body_rotation, body_scale)
 	if enemy_textures.has(enemy_type):
 		var enemy_texture: Texture2D = enemy_textures[enemy_type]
-		var sprite_size := Vector2(58.0, 64.0)
-		if enemy_type == "Calculator Bug":
-			sprite_size = Vector2(60.0, 60.0)
+		var max_sprite_size: Vector2 = ENEMY_SPRITE_MAX_SIZES.get(enemy_type, Vector2(68.0, 66.0))
+		# Pertahankan rasio asli PNG agar monster tidak gepeng atau melebar.
+		var texture_ratio: float = float(enemy_texture.get_width()) / maxf(float(enemy_texture.get_height()), 1.0)
+		var sprite_size: Vector2 = max_sprite_size
+		if texture_ratio > max_sprite_size.x / max_sprite_size.y:
+			sprite_size = Vector2(max_sprite_size.x, max_sprite_size.x / texture_ratio)
+		else:
+			sprite_size = Vector2(max_sprite_size.y * texture_ratio, max_sprite_size.y)
+		# PNG tetap memakai animasi bob, squash, dan kilatan damage yang sama.
 		var tint := Color(1.0, 1.0 - hit_flash * 0.30, 1.0 - hit_flash * 0.30, 1.0)
 		draw_texture_rect(enemy_texture, Rect2(-sprite_size * 0.5, sprite_size), false, tint)
 	else:
