@@ -5,6 +5,15 @@ const ArenaViewScript = preload("res://scripts/presentation/arena_view.gd")
 const QuestionGenerator = preload("res://scripts/domain/question_generator.gd")
 const WAVE_COUNTS: Array[int] = [4, 5, 6]
 const GUARDIAN_COSTS: Dictionary = {"Plusy": 35, "Addy Cannon": 70, "Shield Cube": 50, "Multiply Dragon": 95, "Fraction Fairy": 85, "Number Knight": 85}
+const QUESTION_COOLDOWN_SECONDS: float = 18.0
+const GUARDIAN_PLACEMENT_COOLDOWNS: Dictionary = {
+	"Plusy": 5.0,
+	"Addy Cannon": 7.0,
+	"Shield Cube": 8.0,
+	"Multiply Dragon": 10.0,
+	"Fraction Fairy": 10.0,
+	"Number Knight": 9.0
+}
 
 var energy: int = 180
 var core_hp: int = 120
@@ -21,6 +30,14 @@ var spawn_target: int = 0
 var spawn_timer: float = 0.0
 var passive_energy_timer: float = 0.0
 var question_cooldown_timer: float = 0.0
+var guardian_placement_cooldowns: Dictionary = {
+	"Plusy": 0.0,
+	"Addy Cannon": 0.0,
+	"Shield Cube": 0.0,
+	"Multiply Dragon": 0.0,
+	"Fraction Fairy": 0.0,
+	"Number Knight": 0.0
+}
 var intermission_timer: float = 0.0
 var next_enemy_id: int = 1
 var last_spawned_lane: int = -1
@@ -36,6 +53,10 @@ var projectiles: Array = []
 var current_question: Dictionary = {}
 var arena
 var energy_button: Button
+var energy_cooldown_overlay: ColorRect
+var energy_cooldown_bar: ProgressBar
+var guardian_cooldown_overlays: Array[ColorRect] = []
+var guardian_cooldown_bars: Array[ProgressBar] = []
 var core_label: Label
 var wave_label: Label
 var score_label: Label
@@ -76,7 +97,18 @@ func _process(delta: float) -> void:
 		return
 
 	if question_cooldown_timer > 0.0:
+		var old_question_cooldown: float = question_cooldown_timer
 		question_cooldown_timer = maxf(0.0, question_cooldown_timer - delta)
+		if old_question_cooldown > 0.0 and question_cooldown_timer <= 0.0:
+			_pulse_ready_button(energy_button)
+
+	for guardian_type in guardian_button_types:
+		var old_guardian_cooldown: float = float(guardian_placement_cooldowns.get(guardian_type, 0.0))
+		if old_guardian_cooldown > 0.0:
+			var new_guardian_cooldown: float = maxf(0.0, old_guardian_cooldown - delta)
+			guardian_placement_cooldowns[guardian_type] = new_guardian_cooldown
+			if new_guardian_cooldown <= 0.0:
+				_pulse_ready_button(_get_guardian_button(guardian_type))
 
 	# Regenerasi pasif dibuat kecil agar keputusan penempatan Guardian tetap penting.
 	passive_energy_timer += delta
@@ -109,6 +141,81 @@ func _process(delta: float) -> void:
 			_finish_battle(true)
 
 	_refresh_hud()
+
+func _make_cooldown_overlay(parent_button: Button) -> ColorRect:
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.035, 0.045, 0.035, 0.48)
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.visible = false
+	parent_button.add_child(overlay)
+	return overlay
+
+func _make_cooldown_bar(parent_button: Button) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.min_value = 0.0
+	bar.max_value = 100.0
+	bar.value = 0.0
+	bar.show_percentage = false
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.anchor_left = 0.0
+	bar.anchor_top = 1.0
+	bar.anchor_right = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_left = 5.0
+	bar.offset_top = -10.0
+	bar.offset_right = -5.0
+	bar.offset_bottom = -4.0
+	bar.visible = false
+	var background_style := StyleBoxFlat.new()
+	background_style.bg_color = Color("#1b2118")
+	background_style.set_corner_radius_all(2)
+	bar.add_theme_stylebox_override("background", background_style)
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = Color("#d9b75f")
+	fill_style.set_corner_radius_all(2)
+	bar.add_theme_stylebox_override("fill", fill_style)
+	parent_button.add_child(bar)
+	return bar
+
+func _get_guardian_button(guardian_type: String) -> Button:
+	var button_index: int = guardian_button_types.find(guardian_type)
+	if button_index >= 0 and button_index < guardian_buttons.size():
+		return guardian_buttons[button_index]
+	return null
+
+func _pulse_ready_button(button: Button) -> void:
+	if not is_instance_valid(button) or paused or battle_finished:
+		return
+	button.modulate = Color(1.22, 1.13, 0.78, 1.0)
+	var ready_tween := create_tween()
+	ready_tween.tween_property(button, "modulate", Color.WHITE, 0.32)
+
+func _update_cooldown_visuals() -> void:
+	if is_instance_valid(energy_button):
+		var question_cooling: bool = question_cooldown_timer > 0.0
+		energy_button.disabled = paused or battle_finished or question_cooling
+		if is_instance_valid(energy_cooldown_overlay):
+			energy_cooldown_overlay.visible = question_cooling
+		if is_instance_valid(energy_cooldown_bar):
+			energy_cooldown_bar.visible = question_cooling
+			energy_cooldown_bar.value = (QUESTION_COOLDOWN_SECONDS - question_cooldown_timer) / QUESTION_COOLDOWN_SECONDS * 100.0
+		if question_cooling:
+			energy_button.tooltip_text = "Soal tersedia dalam %d detik" % ceili(question_cooldown_timer)
+		else:
+			energy_button.tooltip_text = "Ketuk untuk membuka soal matematika dan mendapat energi"
+
+	for index in range(guardian_buttons.size()):
+		var guardian_type: String = guardian_button_types[index]
+		var cooldown_max: float = float(GUARDIAN_PLACEMENT_COOLDOWNS.get(guardian_type, 0.0))
+		var remaining: float = float(guardian_placement_cooldowns.get(guardian_type, 0.0))
+		var cooling: bool = remaining > 0.0
+		if index < guardian_cooldown_overlays.size():
+			guardian_cooldown_overlays[index].visible = cooling
+		if index < guardian_cooldown_bars.size():
+			guardian_cooldown_bars[index].visible = cooling
+			var elapsed: float = cooldown_max - remaining
+			guardian_cooldown_bars[index].value = clampf(elapsed / maxf(cooldown_max, 0.001) * 100.0, 0.0, 100.0)
 
 func _build_ui() -> void:
 	# UI berpalet vintage: kertas krem, tinta gelap, hijau hutan, dan emas antik.
@@ -152,6 +259,8 @@ func _build_ui() -> void:
 	energy_button.add_theme_font_size_override("font_size", 21)
 	energy_button.tooltip_text = "Buka soal matematika secara manual untuk mendapat energi"
 	energy_button.pressed.connect(_open_question_popup)
+	energy_cooldown_overlay = _make_cooldown_overlay(energy_button)
+	energy_cooldown_bar = _make_cooldown_bar(energy_button)
 	header.add_child(energy_button)
 
 	var seed_separator := VSeparator.new()
@@ -173,7 +282,11 @@ func _build_ui() -> void:
 		guardian_button.add_theme_font_size_override("font_size", 12 if card_width < 90.0 else 13)
 		guardian_button.tooltip_text = "%s • %d energi" % [guardian_type, int(GUARDIAN_COSTS.get(guardian_type, 0))]
 		guardian_button.pressed.connect(_select_guardian.bind(guardian_type))
+		var cooldown_overlay: ColorRect = _make_cooldown_overlay(guardian_button)
+		var cooldown_bar: ProgressBar = _make_cooldown_bar(guardian_button)
 		guardian_buttons.append(guardian_button)
+		guardian_cooldown_overlays.append(cooldown_overlay)
+		guardian_cooldown_bars.append(cooldown_bar)
 		header.add_child(guardian_button)
 
 	# Tracker wave mengisi ruang tengah secara sengaja, bukan menyisakan celah kosong.
@@ -426,7 +539,7 @@ func _open_question_popup(is_wave_challenge: bool = false) -> void:
 
 	# Soal hanya muncul jika pemain menekan tombol energi. Jeda 18 detik
 	# setelah membuka soal membantu mencegah energi bisa di-farm terlalu cepat.
-	question_cooldown_timer = 18.0
+	question_cooldown_timer = QUESTION_COOLDOWN_SECONDS
 	question_is_wave_challenge = false
 	_new_question()
 	question_popup_open = true
@@ -533,6 +646,11 @@ func _on_answer_pressed(index: int) -> void:
 func _select_guardian(guardian_type: String) -> void:
 	if battle_finished or paused:
 		return
+	var placement_cooldown: float = float(guardian_placement_cooldowns.get(guardian_type, 0.0))
+	if placement_cooldown > 0.0:
+		feedback_label.text = "%s siap dalam %d detik." % [guardian_type, ceili(placement_cooldown)]
+		feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
+		return
 	if energy < int(GUARDIAN_COSTS.get(guardian_type, 99999)) and selected_guardian != guardian_type:
 		feedback_label.text = "Butuh %d energi." % int(GUARDIAN_COSTS.get(guardian_type, 0))
 		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
@@ -563,12 +681,18 @@ func _place_guardian_at(lane: int, column: int) -> void:
 			feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 			return
 	var guardian_type: String = selected_guardian
+	var placement_cooldown: float = float(guardian_placement_cooldowns.get(guardian_type, 0.0))
+	if placement_cooldown > 0.0:
+		feedback_label.text = "%s siap dalam %d detik." % [guardian_type, ceili(placement_cooldown)]
+		feedback_label.add_theme_color_override("font_color", Color("#e9c777"))
+		return
 	var cost: int = int(GUARDIAN_COSTS[guardian_type])
 	if energy < cost:
 		feedback_label.text = "Butuh %d energi." % cost
 		feedback_label.add_theme_color_override("font_color", Color("#f2b4a8"))
 		return
 	energy -= cost
+	guardian_placement_cooldowns[guardian_type] = float(GUARDIAN_PLACEMENT_COOLDOWNS.get(guardian_type, 6.0))
 	var guardian_max_hp: int = 180
 	match guardian_type:
 		"Addy Cannon":
@@ -937,11 +1061,6 @@ func _find_blocking_guardian(enemy: Dictionary) -> int:
 func _refresh_hud() -> void:
 	if is_instance_valid(energy_button):
 		energy_button.text = "✦ %d" % energy
-		energy_button.disabled = paused or battle_finished
-		if question_cooldown_timer > 0.0:
-			energy_button.tooltip_text = "Soal tersedia dalam %d detik" % ceili(question_cooldown_timer)
-		else:
-			energy_button.tooltip_text = "Ketuk untuk membuka soal matematika dan mendapat energi"
 	if is_instance_valid(core_label):
 		core_label.text = "♥ %d" % core_hp
 	if is_instance_valid(wave_label):
@@ -962,6 +1081,7 @@ func _refresh_hud() -> void:
 		arena.queue_redraw()
 	_update_wave_segments()
 	_update_guardian_button_styles()
+	_update_cooldown_visuals()
 
 func _update_wave_segments() -> void:
 	if last_wave_segment_state == current_wave:
@@ -994,13 +1114,17 @@ func _update_guardian_button_styles() -> void:
 		var guardian_type: String = guardian_button_types[index]
 		var is_selected: bool = guardian_type == selected_guardian
 		var can_afford: bool = energy >= int(GUARDIAN_COSTS.get(guardian_type, 99999))
-		guardian_buttons[index].disabled = not can_afford or paused or battle_finished
+		var remaining_cooldown: float = float(guardian_placement_cooldowns.get(guardian_type, 0.0))
+		var is_cooling: bool = remaining_cooldown > 0.0
+		guardian_buttons[index].disabled = not can_afford or paused or battle_finished or is_cooling
 		var base_color: Color = card_colors[guardian_type]
 		var border_color: Color = Color("#e8c36f") if is_selected else card_borders[guardian_type]
 		guardian_buttons[index].add_theme_stylebox_override("normal", _button_style(base_color.lightened(0.12) if is_selected else base_color, border_color, 6, 2))
 		guardian_buttons[index].add_theme_stylebox_override("hover", _button_style(base_color.lightened(0.24), border_color.lightened(0.15), 6, 2))
 		guardian_buttons[index].add_theme_stylebox_override("pressed", _button_style(base_color.darkened(0.12), border_color, 6, 2))
+		guardian_buttons[index].add_theme_stylebox_override("disabled", _button_style(base_color.darkened(0.48) if is_cooling else base_color.darkened(0.20), border_color.darkened(0.35) if is_cooling else border_color.darkened(0.15), 6, 2))
 		guardian_buttons[index].add_theme_color_override("font_color", Color("#f5edd9") if can_afford else Color("#b3ad98"))
+		guardian_buttons[index].add_theme_color_override("font_disabled_color", Color("#8e8b7b") if is_cooling else Color("#b3ad98"))
 
 func _toggle_pause() -> void:
 	if battle_finished or question_popup_open:
